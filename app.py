@@ -1,7 +1,3 @@
-"""
-Główna aplikacja Streamlit - Parkowa Ankieta
-"""
-
 import streamlit as st
 from src.config import setup_page_config, init_supabase
 from src.utils.datetime_utils import get_next_game_time
