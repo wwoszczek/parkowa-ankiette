@@ -1,0 +1,45 @@
+# Konfiguracja czasowa gierek piłkarskich
+# Edytuj te wartości aby zmienić harmonogram
+
+# ===== HARMONOGRAM GIEREK =====
+game:
+  day: 2  # dzień tygodnia (0=poniedziałek, 1=wtorek, ..., 6=niedziela)
+  hour: 18
+  minute: 30
+
+# ===== OTWARCIE ZAPISÓW =====
+signup:
+  day: 0  # poniedziałek
+  hour: 10
+  minute: 0
+
+# ===== LOSOWANIE SKŁADÓW =====
+draw:
+  day: 2  # środa
+  hour: 15
+  minute: 0
+
+# ===== SKŁADY DRUŻYN =====
+# Konfiguracja automatycznego losowania dla różnych liczb graczy
+teams:
+  12:
+    count: 2
+    colors: ["czerwona", "czarna"]
+    players_per_team: [6, 6]
+  
+  14:
+    count: 2
+    colors: ["czerwona", "czarna"]
+    players_per_team: [7, 7]
+  
+  18:
+    count: 3
+    colors: ["biała", "czerwona", "czarna"]
+    players_per_team: [6, 6, 6]
+
+# ===== KOMUNIKATY =====
+messages:
+  manual_draw: "**LOSOWANIE MUSI ODBYĆ SIĘ RĘCZNIE, NIETYPOWA LICZBA UCZESTNIKÓW**"
+  
+# Nazwy dni tygodnia (do generowania komunikatów)
+day_names: ["poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota", "niedziela"]
