@@ -1,5 +1,5 @@
 """
-Funkcje do obsługi gierek w bazie danych
+Functions for handling games in the database
 """
 
 import streamlit as st
@@ -11,18 +11,18 @@ from src.utils.datetime_utils import get_next_game_time
 
 
 def create_new_game_if_needed(supabase: Client):
-    """Tworzy nową gierkę jeśli potrzeba"""
+    """Creates new game if needed"""
     try:
         next_game = get_next_game_time()
         
-        # Sprawdź czy już istnieje aktywna gierka na ten dzień
+        # Check if active game already exists for this day
         response = supabase.table('games').select('*').eq('active', True).execute()
         
         active_games = [game for game in response.data 
                        if datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE).date() == next_game.date()]
         
         if not active_games:
-            # Utwórz nową gierkę
+            # Create new game
             new_game = {
                 'id': str(uuid.uuid4()),
                 'start_time': next_game.isoformat(),
@@ -38,7 +38,7 @@ def create_new_game_if_needed(supabase: Client):
 
 
 def deactivate_past_games(supabase: Client):
-    """Dezaktywuje gierki, które już się odbyły"""
+    """Deactivates games that have already taken place"""
     try:
         now = datetime.now(TIMEZONE)
         response = supabase.table('games').select('*').eq('active', True).execute()
@@ -52,7 +52,7 @@ def deactivate_past_games(supabase: Client):
 
 
 def get_active_games(supabase: Client):
-    """Pobiera aktywne gierki"""
+    """Gets active games"""
     try:
         response = supabase.table('games').select('*').eq('active', True).order('start_time').execute()
         return response.data
@@ -62,7 +62,7 @@ def get_active_games(supabase: Client):
 
 
 def get_past_games(supabase: Client):
-    """Pobiera nieaktywne gierki (historia)"""
+    """Gets inactive games (history)"""
     try:
         response = supabase.table('games').select('*').eq('active', False).order('start_time', desc=True).execute()
         return response.data

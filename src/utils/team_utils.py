@@ -1,5 +1,5 @@
 """
-Funkcje do losowania składów drużyn
+Functions for drawing team lineups
 """
 
 import random
@@ -7,7 +7,7 @@ from src.game_config import TEAM_CONFIGS, ALLOWED_PLAYER_COUNTS
 
 
 def draw_teams(players: list, num_players: int):
-    """Losuje składy drużyn na podstawie konfiguracji"""
+    """Draws team lineups based on configuration"""
     if num_players not in ALLOWED_PLAYER_COUNTS:
         return None
     
@@ -27,12 +27,12 @@ def draw_teams(players: list, num_players: int):
 
 
 def is_valid_player_count(num_players: int) -> bool:
-    """Sprawdza czy liczba graczy pozwala na automatyczne losowanie"""
+    """Checks if the number of players allows for automatic drawing"""
     return num_players in ALLOWED_PLAYER_COUNTS
 
 
 def get_team_info(num_players: int) -> dict:
-    """Zwraca informacje o konfiguracji drużyn dla danej liczby graczy"""
+    """Returns team configuration information for given number of players"""
     if num_players in TEAM_CONFIGS:
         return TEAM_CONFIGS[num_players]
     return None

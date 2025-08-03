@@ -1,5 +1,5 @@
 """
-Strona losowania składów drużyn
+Page for drawing team lineups
 """
 
 import streamlit as st
@@ -15,7 +15,7 @@ from src.game_config import DRAW_NOT_AVAILABLE_MESSAGE, MANUAL_DRAW_MESSAGE
 
 
 def display_teams(teams_dict: dict):
-    """Wyświetla składy drużyn w kolumnach"""
+    """Displays team lineups in columns"""
     if len(teams_dict) == 2:
         col1, col2 = st.columns(2)
         colors = list(teams_dict.keys())
@@ -51,15 +51,15 @@ def display_teams(teams_dict: dict):
 
 
 def draw_page(supabase: Client):
-    """Strona losowania składów"""
+    """Team lineup drawing page"""
     st.header("🎲 Losowanie składów")
     
-    # Sprawdź czy jest dozwolony czas na losowanie
+    # Check if draw time is allowed
     if not is_draw_time_allowed():
         st.warning(DRAW_NOT_AVAILABLE_MESSAGE)
         return
     
-    # Pobierz aktywne gierki
+    # Get active games
     active_games = get_active_games(supabase)
     
     if not active_games:
@@ -86,12 +86,12 @@ def draw_page(supabase: Client):
         else:
             st.error(MANUAL_DRAW_MESSAGE)
         
-        # Pokaż aktualne składy jeśli istnieją
+        # Show current lineups if they exist
         teams = get_teams_for_game(supabase, game['id'])
         if teams:
             st.subheader("Wylosowane składy:")
             
-            # Grupuj według kolorów
+            # Group by colors
             teams_dict = {}
             for team in teams:
                 teams_dict[team['team_color']] = team['players']

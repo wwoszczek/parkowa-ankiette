@@ -1,5 +1,5 @@
 """
-Strona historii gierek
+Game history page
 """
 
 import streamlit as st
@@ -13,7 +13,7 @@ from src.utils.teams_db import get_teams_for_game
 
 
 def display_history_teams(teams_dict: dict):
-    """Wyświetla składy drużyn w historii"""
+    """Displays team lineups in history"""
     if len(teams_dict) == 2:
         col1, col2 = st.columns(2)
         colors = list(teams_dict.keys())
@@ -49,11 +49,11 @@ def display_history_teams(teams_dict: dict):
 
 
 def history_page(supabase: Client):
-    """Strona historii"""
+    """History page"""
     st.header("📚 Historia gierek")
     
     try:
-        # Pobierz wszystkie nieaktywne gierki
+        # Get all inactive games
         past_games = get_past_games(supabase)
         
         if not past_games:
@@ -64,7 +64,7 @@ def history_page(supabase: Client):
             game_time = datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE)
             
             with st.expander(f"Gierka z {game_time.strftime('%d.%m.%Y %H:%M')}"):
-                # Lista zapisanych
+                # List of signups
                 signups = get_signups_for_game(supabase, game['id'])
                 
                 if signups:
@@ -82,7 +82,7 @@ def history_page(supabase: Client):
                 else:
                     st.info("Brak zapisów.")
                 
-                # Składy drużyn
+                # Team lineups
                 teams = get_teams_for_game(supabase, game['id'])
                 if teams:
                     st.subheader("Składy drużyn:")

@@ -8,27 +8,27 @@ from src.pages.history import history_page
 
 
 def main():
-    """Główna funkcja aplikacji"""
-    # Konfiguracja strony
+    """Main application function"""
+    # Page configuration
     setup_page_config()
     
     st.title("⚽ Parkowa Ankieta - Cotygodniowe Gierki")
     st.markdown("---")
     
-    # Inicjalizacja Supabase
+    # Initialize Supabase
     supabase = init_supabase()
     if not supabase:
         st.error("Nie można połączyć się z bazą danych!")
         return
 
-    # Sidebar nawigacji
+    # Navigation sidebar
     st.sidebar.title("Nawigacja")
     page = st.sidebar.radio(
         "Wybierz stronę:",
         ["Zapisy", "Lista", "Losowanie", "Historia"]
     )
     
-    # Informacja o najbliższej gierce
+    # Next game information
     next_game_time = get_next_game_time()
     st.sidebar.markdown("### 📅 Najbliższa gierka:")
     st.sidebar.info(f"{next_game_time.strftime('%d.%m.%Y %H:%M')}")
@@ -36,7 +36,7 @@ def main():
     st.sidebar.markdown("### 🤖 Automatyka:")
     st.sidebar.success("GitHub Actions\n(3x dziennie)")
     
-    # Routing stron
+    # Page routing
     if page == "Zapisy":
         signup_page(supabase)
     elif page == "Lista":

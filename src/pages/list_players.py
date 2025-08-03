@@ -1,5 +1,5 @@
 """
-Strona z listą zapisanych graczy
+Page with list of signed up players
 """
 
 import streamlit as st
@@ -12,10 +12,10 @@ from src.utils.signup_utils import get_signups_for_game
 
 
 def list_page(supabase: Client):
-    """Strona z listą zapisanych"""
+    """Page with list of signed up players"""
     st.header("📋 Lista zapisanych")
     
-    # Pobierz aktywne gierki
+    # Get active games
     active_games = get_active_games(supabase)
     
     if not active_games:

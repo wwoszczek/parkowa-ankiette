@@ -1,5 +1,5 @@
 """
-Funkcje do obsługi drużyn w bazie danych
+Functions for handling teams in the database
 """
 
 import streamlit as st
@@ -8,12 +8,12 @@ from supabase import Client
 
 
 def save_teams(supabase: Client, game_id: str, teams: dict):
-    """Zapisuje składy drużyn do bazy"""
+    """Saves team lineups to database"""
     try:
-        # Usuń poprzednie składy dla tej gierki
+        # Remove previous lineups for this game
         supabase.table('teams').delete().eq('game_id', game_id).execute()
         
-        # Dodaj nowe składy
+        # Add new lineups
         for color, players in teams.items():
             team = {
                 'id': str(uuid.uuid4()),
@@ -29,7 +29,7 @@ def save_teams(supabase: Client, game_id: str, teams: dict):
 
 
 def get_teams_for_game(supabase: Client, game_id: str):
-    """Pobiera składy drużyn dla danej gierki"""
+    """Gets team lineups for a given game"""
     try:
         response = supabase.table('teams').select('*').eq('game_id', game_id).execute()
         return response.data

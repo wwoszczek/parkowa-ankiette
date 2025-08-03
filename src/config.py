@@ -1,17 +1,17 @@
 """
-Konfiguracja aplikacji i inicjalizacja Supabase
+Application configuration and Supabase initialization
 """
 
 import streamlit as st
 import pytz
 from supabase import create_client, Client
 
-# Konfiguracja strefy czasowej
+# Timezone configuration
 TIMEZONE = pytz.timezone('Europe/Warsaw')
 
 @st.cache_resource
 def init_supabase() -> Client:
-    """Inicjalizacja klienta Supabase"""
+    """Initialize Supabase client"""
     try:
         url = st.secrets["supabase"]["url"]
         key = st.secrets["supabase"]["key"]
@@ -21,7 +21,7 @@ def init_supabase() -> Client:
         return None
 
 def setup_page_config():
-    """Konfiguracja strony Streamlit"""
+    """Configure Streamlit page settings"""
     st.set_page_config(
         page_title="Parkowa Ankieta - Gierki Piłkarskie",
         page_icon="⚽",

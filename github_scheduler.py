@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-GitHub Actions Scheduler - niezależny od UI Streamlit
-Uruchamiany automatycznie co godzinę przez GitHub Actions
+GitHub Actions Scheduler - independent from Streamlit UI
+Runs automatically every hour via GitHub Actions
 """
 
 import os
@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import uuid
 from supabase import create_client, Client
 
-# Konfiguracja logowania
+# Logging configuration
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -22,7 +22,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Dodaj ścieżkę do głównego katalogu
+# Add path to main directory
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 try:
@@ -35,7 +35,7 @@ except ImportError as e:
 
 
 def get_supabase_client() -> Client:
-    """Inicjalizacja klienta Supabase z GitHub Secrets"""
+    """Initialize Supabase client from GitHub Secrets"""
     url = os.getenv('SUPABASE_URL')
     key = os.getenv('SUPABASE_KEY')
     
@@ -47,7 +47,7 @@ def get_supabase_client() -> Client:
 
 
 def deactivate_past_games(supabase: Client) -> int:
-    """Dezaktywuje przeszłe gierki"""
+    """Deactivate past games"""
     logger.info("🔍 Sprawdzanie przeszłych gierek do dezaktywacji...")
     now = datetime.now(TIMEZONE)
     
@@ -76,7 +76,7 @@ def deactivate_past_games(supabase: Client) -> int:
 
 
 def create_upcoming_games(supabase: Client) -> int:
-    """Tworzy gierki na kolejne 4 tygodnie"""
+    """Create games for next 4 weeks"""
     logger.info("🏗️ Sprawdzanie czy potrzeba utworzyć nowe gierki...")
     
     created_count = 0
@@ -97,12 +97,12 @@ def create_upcoming_games(supabase: Client) -> int:
 
 
 def create_game_for_week(supabase: Client, weeks_ahead: int) -> bool:
-    """Tworzy gierkę na określony tydzień w przyszłości"""
+    """Create game for specific week in the future"""
     try:
         base_game_time = get_next_game_time()
         game_time = base_game_time + timedelta(weeks=weeks_ahead)
         
-        # Sprawdź czy gierka już istnieje
+        # Check if game already exists
         response = supabase.table('games').select('*').execute()
         existing_games = [
             game for game in response.data 
@@ -110,7 +110,7 @@ def create_game_for_week(supabase: Client, weeks_ahead: int) -> bool:
         ]
         
         if not existing_games:
-            # Utwórz nową gierkę
+            # Create new game
             new_game = {
                 'id': str(uuid.uuid4()),
                 'start_time': game_time.isoformat(),
@@ -128,12 +128,12 @@ def create_game_for_week(supabase: Client, weeks_ahead: int) -> bool:
 
 
 def get_scheduler_stats(supabase: Client) -> dict:
-    """Pobiera statystyki schedulera"""
+    """Gets scheduler statistics"""
     try:
-        # Aktywne gierki
+        # Active games
         active_games = supabase.table('games').select('*').eq('active', True).execute()
         
-        # Najbliższa gierka
+        # Next game
         now = datetime.now(TIMEZONE)
         upcoming_games = [
             game for game in active_games.data
@@ -149,7 +149,7 @@ def get_scheduler_stats(supabase: Client) -> dict:
         return {
             'active_games_count': len(active_games.data),
             'upcoming_games_count': len(upcoming_games),
-            'next_game': next_game.strftime('%d.%m.%Y %H:%M') if next_game else 'Brak',
+            'next_game': next_game.strftime('%d.%m.%Y %H:%M') if next_game else 'None',
             'total_games_count': len(supabase.table('games').select('*').execute().data)
         }
     except Exception as e:
@@ -158,51 +158,51 @@ def get_scheduler_stats(supabase: Client) -> dict:
 
 
 def main():
-    """Główna funkcja schedulera GitHub Actions"""
+    """Main function of GitHub Actions scheduler"""
     start_time = datetime.now(TIMEZONE)
     logger.info(f"🚀 GitHub Actions Scheduler - start: {start_time.strftime('%d.%m.%Y %H:%M:%S')}")
     
-    # Sprawdź czy to wymuszenie
+    # Check if this is forced run
     force_run = os.getenv('FORCE_RUN', 'false').lower() == 'true'
     if force_run:
-        logger.info("⚡ WYMUSZENIE - pełne sprawdzenie schedulera")
+        logger.info("⚡ FORCE - full scheduler check")
     
     try:
-        # 1. Inicjalizacja
+        # 1. Initialization
         supabase = get_supabase_client()
         
-        # 2. Pobierz statystyki początkowe
+        # 2. Get initial statistics
         initial_stats = get_scheduler_stats(supabase)
-        logger.info(f"📊 Stan początkowy: {initial_stats['active_games_count']} aktywnych gierek")
+        logger.info(f"📊 Initial state: {initial_stats['active_games_count']} active games")
         
-        # 4. Dezaktywuj przeszłe gierki
+        # 4. Deactivate past games
         deactivated = deactivate_past_games(supabase)
         
-        # 5. Utwórz nowe gierki
+        # 5. Create new games
         created = create_upcoming_games(supabase)
         
-        # 6. Pobierz statystyki końcowe
+        # 6. Get final statistics
         final_stats = get_scheduler_stats(supabase)
         
-        # 7. Podsumowanie
+        # 7. Summary
         end_time = datetime.now(TIMEZONE)
         duration = (end_time - start_time).total_seconds()
         
         logger.info("=" * 50)
-        logger.info("✅ SCHEDULER ZAKOŃCZONY POMYŚLNIE")
-        logger.info(f"⏱️  Czas wykonania: {duration:.2f}s")
-        logger.info(f"🔴 Dezaktywowano: {deactivated} gierek")
-        logger.info(f"🟢 Utworzono: {created} nowych gierek")
-        logger.info(f"📊 Aktywne gierki: {final_stats['active_games_count']}")
-        logger.info(f"🎯 Najbliższa gierka: {final_stats['next_game']}")
+        logger.info("✅ SCHEDULER COMPLETED SUCCESSFULLY")
+        logger.info(f"⏱️  Execution time: {duration:.2f}s")
+        logger.info(f"🔴 Deactivated: {deactivated} games")
+        logger.info(f"🟢 Created: {created} new games")
+        logger.info(f"📊 Active games: {final_stats['active_games_count']}")
+        logger.info(f"🎯 Next game: {final_stats['next_game']}")
         logger.info("=" * 50)
         
-        # Sprawdzenie czy wszystko OK
+        # Check if everything is OK
         if final_stats['upcoming_games_count'] < 4:
-            logger.warning(f"⚠️  Tylko {final_stats['upcoming_games_count']} nadchodzących gierek (powinno być 4)")
+            logger.warning(f"⚠️  Only {final_stats['upcoming_games_count']} upcoming games (should be 4)")
         
     except Exception as e:
-        logger.error(f"💥 KRYTYCZNY BŁĄD SCHEDULERA: {e}")
+        logger.error(f"💥 CRITICAL SCHEDULER ERROR: {e}")
         sys.exit(1)
 
 

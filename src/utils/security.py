@@ -1,5 +1,5 @@
 """
-Rate limiting i dodatkowe zabezpieczenia
+Rate limiting and additional security measures
 """
 
 import streamlit as st
@@ -10,44 +10,44 @@ from src.config import TIMEZONE
 
 
 class RateLimiter:
-    """Prosty rate limiter używający session state"""
+    """Simple rate limiter using session state"""
     
     @staticmethod
     def check_signup_rate_limit(key: str = "signup_attempts", max_attempts: int = 3, window_minutes: int = 5) -> bool:
         """
-        Sprawdza czy użytkownik nie przekroczył limitu zapisów
+        Check if user hasn't exceeded signup limit
         
         Args:
-            key: klucz w session_state
-            max_attempts: max liczba prób
-            window_minutes: okno czasowe w minutach
+            key: key in session_state
+            max_attempts: maximum number of attempts
+            window_minutes: time window in minutes
             
         Returns:
-            True jeśli może kontynuować, False jeśli limit przekroczony
+            True if can continue, False if limit exceeded
         """
         now = datetime.now()
         
         if key not in st.session_state:
             st.session_state[key] = []
         
-        # Usuń stare próby (sprzed window_minutes)
+        # Remove old attempts (before window_minutes)
         cutoff = now - timedelta(minutes=window_minutes)
         st.session_state[key] = [
             attempt for attempt in st.session_state[key] 
             if attempt > cutoff
         ]
         
-        # Sprawdź czy można dodać nową próbę
+        # Check if can add new attempt
         if len(st.session_state[key]) >= max_attempts:
             return False
         
-        # Dodaj nową próbę
+        # Add new attempt
         st.session_state[key].append(now)
         return True
     
     @staticmethod
     def get_remaining_cooldown(key: str = "signup_attempts", window_minutes: int = 5) -> int:
-        """Zwraca pozostały czas cooldown w sekundach"""
+        """Return remaining cooldown time in seconds"""
         if key not in st.session_state or not st.session_state[key]:
             return 0
         
@@ -62,7 +62,7 @@ class RateLimiter:
 
 def validate_nickname(nickname: str) -> tuple[bool, str]:
     """
-    Waliduje nickname
+    Validate nickname
     
     Returns:
         (is_valid, error_message)
@@ -76,12 +76,12 @@ def validate_nickname(nickname: str) -> tuple[bool, str]:
     if len(nickname) > 20:
         return False, "Nickname nie może być dłuższy niż 20 znaków"
     
-    # Dozwolone znaki: litery, cyfry, spacje, myślniki, podkreślenia
+    # Allowed characters: letters, digits, spaces, hyphens, underscores
     allowed_chars = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -_ąćęłńóśźżĄĆĘŁŃÓŚŹŻ')
     if not all(char in allowed_chars for char in nickname):
         return False, "Nickname zawiera niedozwolone znaki"
     
-    # Zabronione słowa (można rozszerzyć)
+    # Forbidden words (can be extended)
     forbidden_words = ['admin', 'test', 'null', 'undefined', 'system']
     if nickname.lower() in forbidden_words:
         return False, "Ten nickname jest zarezerwowany"
@@ -91,7 +91,7 @@ def validate_nickname(nickname: str) -> tuple[bool, str]:
 
 def validate_password(password: str) -> tuple[bool, str]:
     """
-    Waliduje hasło
+    Validate password
     
     Returns:
         (is_valid, error_message)
@@ -110,42 +110,42 @@ def validate_password(password: str) -> tuple[bool, str]:
 
 def sanitize_input(text: str) -> str:
     """
-    Sanityzuje wejście użytkownika
+    Sanitize user input
     
     Args:
-        text: tekst do oczyszczenia
+        text: text to clean
         
     Returns:
-        oczyszczony tekst
+        cleaned text
     """
     if not text:
         return ""
     
-    # Usuń białe znaki z początku i końca
+    # Remove whitespace from beginning and end
     text = text.strip()
     
-    # Usuń wielokrotne spacje
+    # Remove multiple spaces
     text = ' '.join(text.split())
     
     return text
 
 
-# Dodatkowe funkcje pomocnicze dla security
+# Additional helper functions for security
 
 def log_security_event(event_type: str, details: str):
     """
-    Loguje wydarzenia związane z bezpieczeństwem
+    Log security-related events
     
     Args:
-        event_type: typ wydarzenia (rate_limit, invalid_input, etc.)
-        details: szczegóły wydarzenia
+        event_type: event type (rate_limit, invalid_input, etc.)
+        details: event details
     """
     timestamp = datetime.now(TIMEZONE).strftime('%Y-%m-%d %H:%M:%S')
     
-    # W prawdziwej aplikacji warto to logować do zewnętrznego serwisu
+    # In production app, it's worth logging to external service
     print(f"[SECURITY] {timestamp} - {event_type}: {details}")
     
-    # Opcjonalnie można dodać do session_state dla debugowania
+    # Optionally add to session_state for debugging
     if 'security_log' not in st.session_state:
         st.session_state['security_log'] = []
     
@@ -155,6 +155,6 @@ def log_security_event(event_type: str, details: str):
         'details': details
     })
     
-    # Ogranicz rozmiar logu
+    # Limit log size
     if len(st.session_state['security_log']) > 50:
         st.session_state['security_log'] = st.session_state['security_log'][-50:]

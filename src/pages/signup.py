@@ -1,5 +1,5 @@
 """
-Strona zapisów na gierki
+Game signup page
 """
 
 import streamlit as st
@@ -19,17 +19,17 @@ from src.game_config import SIGNUP_OPENING_MESSAGE
 
 
 def signup_page(supabase: Client):
-    """Strona zapisów"""
+    """Signup page"""
     st.header("⚽ Zapisy na gierkę")
     
-    # Pobierz aktywne gierki
+    # Get active games
     active_games = get_active_games(supabase)
     
     if not active_games:
         st.warning(f"Brak aktywnych gierek. {SIGNUP_OPENING_MESSAGE}")
         return
     
-    # Wybór gierki
+    # Game selection
     game_options = []
     for game in active_games:
         game_time = datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE)
@@ -47,7 +47,7 @@ def signup_page(supabase: Client):
     with col1:
         st.subheader("Zapisz się")
         
-        # Sprawdź rate limiting
+        # Check rate limiting
         if not RateLimiter.check_signup_rate_limit("signup_attempts", 3, 5):
             cooldown = RateLimiter.get_remaining_cooldown("signup_attempts", 5)
             st.error(f"⏰ Za dużo prób zapisu. Spróbuj ponownie za {cooldown} sekund.")
@@ -60,25 +60,25 @@ def signup_page(supabase: Client):
             submit = st.form_submit_button("Zapisz się")
             
             if submit:
-                # Sanityzacja i walidacja
+                # Sanitization and validation
                 nickname = sanitize_input(nickname)
                 password = sanitize_input(password)
                 
-                # Walidacja nickname
+                # Nickname validation
                 nickname_valid, nickname_error = validate_nickname(nickname)
                 if not nickname_valid:
                     st.error(f"❌ Błąd nickname: {nickname_error}")
                     log_security_event("invalid_nickname", f"nickname: {nickname[:10]}...")
                     return
                 
-                # Walidacja hasła
+                # Password validation
                 password_valid, password_error = validate_password(password)
                 if not password_valid:
                     st.error(f"❌ Błąd hasła: {password_error}")
                     log_security_event("invalid_password", "password validation failed")
                     return
                 
-                # Próba zapisu
+                # Signup attempt
                 success, message = add_signup(supabase, selected_game_id, nickname, password)
                 if success:
                     st.success(message)
@@ -91,7 +91,7 @@ def signup_page(supabase: Client):
     with col2:
         st.subheader("Wypisz się")
         
-        # Sprawdź rate limiting (osobny limit dla wypisów)
+        # Check rate limiting (separate limit for signouts)
         if not RateLimiter.check_signup_rate_limit("signout_attempts", 5, 5):
             cooldown = RateLimiter.get_remaining_cooldown("signout_attempts", 5)
             st.error(f"⏰ Za dużo prób wypisu. Spróbuj ponownie za {cooldown} sekund.")
@@ -104,16 +104,16 @@ def signup_page(supabase: Client):
             submit_out = st.form_submit_button("Wypisz się")
             
             if submit_out:
-                # Sanityzacja
+                # Sanitization
                 nickname_out = sanitize_input(nickname_out)
                 password_out = sanitize_input(password_out)
                 
-                # Podstawowa walidacja
+                # Basic validation
                 if not nickname_out or not password_out:
                     st.error("❌ Podaj nickname i hasło")
                     return
                 
-                # Próba wypisu
+                # Signout attempt
                 success, message = remove_signup(supabase, selected_game_id, nickname_out, password_out)
                 if success:
                     st.success(message)
