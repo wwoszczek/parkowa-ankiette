@@ -6,18 +6,21 @@ import streamlit as st
 from datetime import datetime
 from supabase import Client
 from src.config import TIMEZONE
-from src.utils.game_utils import deactivate_past_games, create_new_game_if_needed, get_active_games
+from src.utils.game_utils import get_active_games
 from src.utils.signup_utils import add_signup, remove_signup
+from src.utils.security import (
+    RateLimiter, 
+    validate_nickname, 
+    validate_password, 
+    sanitize_input,
+    log_security_event
+)
 from src.game_config import SIGNUP_OPENING_MESSAGE
 
 
 def signup_page(supabase: Client):
     """Strona zapisów"""
     st.header("⚽ Zapisy na gierkę")
-    
-    # Aktualizuj stan gierek
-    deactivate_past_games(supabase)
-    create_new_game_if_needed(supabase)
     
     # Pobierz aktywne gierki
     active_games = get_active_games(supabase)
@@ -43,30 +46,79 @@ def signup_page(supabase: Client):
     
     with col1:
         st.subheader("Zapisz się")
+        
+        # Sprawdź rate limiting
+        if not RateLimiter.check_signup_rate_limit("signup_attempts", 3, 5):
+            cooldown = RateLimiter.get_remaining_cooldown("signup_attempts", 5)
+            st.error(f"⏰ Za dużo prób zapisu. Spróbuj ponownie za {cooldown} sekund.")
+            log_security_event("rate_limit", f"signup attempts exceeded")
+            return
+        
         with st.form("signup_form"):
             nickname = st.text_input("Nickname:")
             password = st.text_input("Hasło:", type="password")
             submit = st.form_submit_button("Zapisz się")
             
-            if submit and nickname and password:
+            if submit:
+                # Sanityzacja i walidacja
+                nickname = sanitize_input(nickname)
+                password = sanitize_input(password)
+                
+                # Walidacja nickname
+                nickname_valid, nickname_error = validate_nickname(nickname)
+                if not nickname_valid:
+                    st.error(f"❌ Błąd nickname: {nickname_error}")
+                    log_security_event("invalid_nickname", f"nickname: {nickname[:10]}...")
+                    return
+                
+                # Walidacja hasła
+                password_valid, password_error = validate_password(password)
+                if not password_valid:
+                    st.error(f"❌ Błąd hasła: {password_error}")
+                    log_security_event("invalid_password", "password validation failed")
+                    return
+                
+                # Próba zapisu
                 success, message = add_signup(supabase, selected_game_id, nickname, password)
                 if success:
                     st.success(message)
+                    log_security_event("successful_signup", f"nickname: {nickname}")
                     st.rerun()
                 else:
                     st.error(message)
+                    log_security_event("failed_signup", f"nickname: {nickname}, error: {message[:50]}...")
     
     with col2:
         st.subheader("Wypisz się")
+        
+        # Sprawdź rate limiting (osobny limit dla wypisów)
+        if not RateLimiter.check_signup_rate_limit("signout_attempts", 5, 5):
+            cooldown = RateLimiter.get_remaining_cooldown("signout_attempts", 5)
+            st.error(f"⏰ Za dużo prób wypisu. Spróbuj ponownie za {cooldown} sekund.")
+            log_security_event("rate_limit", f"signout attempts exceeded")
+            return
+        
         with st.form("signout_form"):
             nickname_out = st.text_input("Nickname:", key="signout_nick")
             password_out = st.text_input("Hasło:", type="password", key="signout_pass")
             submit_out = st.form_submit_button("Wypisz się")
             
-            if submit_out and nickname_out and password_out:
+            if submit_out:
+                # Sanityzacja
+                nickname_out = sanitize_input(nickname_out)
+                password_out = sanitize_input(password_out)
+                
+                # Podstawowa walidacja
+                if not nickname_out or not password_out:
+                    st.error("❌ Podaj nickname i hasło")
+                    return
+                
+                # Próba wypisu
                 success, message = remove_signup(supabase, selected_game_id, nickname_out, password_out)
                 if success:
                     st.success(message)
+                    log_security_event("successful_signout", f"nickname: {nickname_out}")
                     st.rerun()
                 else:
                     st.error(message)
+                    log_security_event("failed_signout", f"nickname: {nickname_out}, error: {message[:50]}...")

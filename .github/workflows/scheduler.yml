@@ -1,0 +1,63 @@
+name: 🤖 Automatyczny Scheduler Gierek
+
+on:
+  schedule:
+    # Uruchamia się 3 razy dziennie: 8:00, 14:00, 20:00
+    - cron: '0 8,14,20 * * *'
+  
+  # Możliwość ręcznego uruchomienia z GitHub UI
+  workflow_dispatch:
+    inputs:
+      force_run:
+        description: 'Wymuszenie pełnego sprawdzenia'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  # Zmienne środowiskowe z GitHub Secrets
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+
+jobs:
+  scheduler:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        cache: 'pip'
+    
+    - name: 📦 Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: 🚀 Run scheduler
+      run: |
+        echo "🤖 Uruchamianie schedulera gierek..."
+        python github_scheduler.py 2>&1 | sed 's/supabase\.co[^[:space:]]*/[MASKED_URL]/g; s/eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*/[MASKED_TOKEN]/g'
+      env:
+        FORCE_RUN: ${{ github.event.inputs.force_run }}
+    
+    - name: 📊 Upload logs as artifacts (on failure)
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: scheduler-logs
+        path: |
+          *.log
+          /tmp/scheduler-*.log
+        retention-days: 7
+    
+    - name: 💬 Notify on failure (optional)
+      if: failure()
+      run: |
+        echo "❌ Scheduler failed at $(date)"
+        # Tutaj można dodać notyfikację na Slack/Discord/email

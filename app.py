@@ -20,7 +20,7 @@ def main():
     if not supabase:
         st.error("Nie można połączyć się z bazą danych!")
         return
-    
+
     # Sidebar nawigacji
     st.sidebar.title("Nawigacja")
     page = st.sidebar.radio(
@@ -32,6 +32,9 @@ def main():
     next_game_time = get_next_game_time()
     st.sidebar.markdown("### 📅 Najbliższa gierka:")
     st.sidebar.info(f"{next_game_time.strftime('%d.%m.%Y %H:%M')}")
+    
+    st.sidebar.markdown("### 🤖 Automatyka:")
+    st.sidebar.success("GitHub Actions\n(3x dziennie)")
     
     # Routing stron
     if page == "Zapisy":

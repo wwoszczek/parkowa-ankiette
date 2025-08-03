@@ -5,9 +5,19 @@ Aplikacja Streamlit do organizowania cotygodniowych gierek piłkarskich z automa
 ## ⚡ Funkcjonalności
 
 ### 🗓️ Automatyczne zarządzanie gierkami
-- Gierki odbywają się w **środy o 18:30**
-- Zapisy otwierają się automatycznie **w poniedziałki o 10:00**
-- Gierki stają się nieaktywne po czasie rozpoczęcia
+- - `signup.py` - Formularz zapisów i wypisów
+- `list_players.py` - Wyświetlanie listy zapisanych graczy
+- `draw_teams.py` - Interface losowania składów
+- `history.py` - Przeglądanie historii gierek
+
+#### 🛠️ **src/utils/** - Funkcje pomocniczeb Actions Sche- `signup.py` - Formularz zapisów i wypisów
+- `list_players.py` - Wyświetlanie listy zapisanych graczy
+- `draw_teams.py` - Interface losowania składów
+- `history.py` - Przeglądanie historii gierek** - 🤖 **CAŁKOWICIE NIEZALEŻNY** od UI
+- Gierki tworzone są **4 tygodnie do przodu** automatycznie **3 razy dziennie**
+- **Zero zależności** od odwiedzin użytkowników - działa w chmurze GitHub
+- **Odporność na awarie** - system automatycznie nadrabia zaległości
+- **Monitoring** - pełne logi w GitHub Actions (8:00, 14:00, 20:00)
 
 ### 👥 System zapisów
 - Gracze zapisują się podając **nickname** i **hasło**
@@ -35,6 +45,24 @@ Aplikacja Streamlit do organizowania cotygodniowych gierek piłkarskich z automa
 - Python 3.8+
 - Konto Supabase
 - Konto Streamlit Cloud (opcjonalne, do deploymentu)
+
+### ⚡ NAJWAŻNIEJSZE: GitHub Actions Scheduler
+
+**Gierki są tworzone AUTOMATYCZNIE przez GitHub Actions** - całkowicie niezależnie od aplikacji Streamlit!
+
+🤖 **Jak to działa:**
+1. **GitHub Actions** uruchamia scheduler **3 razy dziennie** (8:00, 14:00, 20:00)
+2. **Nie wymaga** odwiedzin użytkowników ani aktywnej aplikacji  
+3. **Streamlit może "spać"** - scheduler działa nadal
+4. **Darmowe** - 90 minut/miesiąc vs 2000 limit (1800 minut zapasu!)
+
+📋 **Szybka konfiguracja:**
+1. Dodaj sekrety w GitHub repo: `SUPABASE_URL` i `SUPABASE_KEY`
+2. Workflow jest już gotowy w `.github/workflows/scheduler.yml`
+3. **Gotowe!** - scheduler pracuje automatycznie
+
+**Rozwiązania (jeśli nie chcesz GitHub Actions):**
+1. **Regularne odwiedziny** - ktoś z zespołu sprawdza aplikację raz na tydzień
 
 ### 1. Klonowanie repozytorium
 ```bash
@@ -116,6 +144,22 @@ streamlit run app.py
 
 ## 🔧 Konfiguracja
 
+### 🤖 Automatyzacja schedulera
+
+#### ⭐ Opcja 1: GitHub Actions (ZALECANA)
+```yaml
+# Automatycznie skonfigurowane w .github/workflows/scheduler.yml
+# Uruchamia się 3 razy dziennie: 8:00, 14:00, 20:00
+# ZERO konserwacji, ZERO kosztów, ZERO zależności od UI
+```
+
+**Konfiguracja:**
+1. W GitHub repo: `Settings > Secrets and variables > Actions`
+2. Dodaj: `SUPABASE_URL` i `SUPABASE_KEY`  
+3. **Gotowe!** - scheduler działa automatycznie 3x dziennie
+
+**Szczegóły:** Zobacz `GITHUB_ACTIONS_SETUP.md`
+
 ### ⏰ Parametry czasowe
 Wszystkie ustawienia czasowe można łatwo zmienić w pliku `game_consts.yaml`:
 
@@ -172,10 +216,15 @@ TIMEZONE = pytz.timezone('Europe/Warsaw')
 ### Struktura plików
 ```
 parkowa-ankiette/
-├── app.py                 # Główna aplikacja (tylko routing i inicjalizacja)
+├── app.py                 # Główna aplikacja (tylko routing)
+├── github_scheduler.py    # 🤖 GITHUB ACTIONS SCHEDULER (niezależny!)
 ├── game_consts.yaml       # ⚙️ KONFIGURACJA CZASOWA (dni, godziny gierek)
 ├── requirements.txt       # Zależności Python
 ├── database_setup.sql     # Skrypt inicjalizujący bazę danych
+├── GITHUB_ACTIONS_SETUP.md # 📖 Instrukcja konfiguracji GitHub Actions
+├── .github/
+│   └── workflows/
+│       └── scheduler.yml  # ⚡ Workflow GitHub Actions (3x dziennie)
 ├── .streamlit/
 │   └── secrets.toml      # Konfiguracja sekretów (lokalnie)
 ├── src/                   # Kod źródłowy aplikacji
@@ -195,7 +244,8 @@ parkowa-ankiette/
 │       ├── game_utils.py # Operacje na gierkach w bazie
 │       ├── signup_utils.py # Operacje na zapisach graczy
 │       ├── team_utils.py # Logika losowania drużyn
-│       └── teams_db.py   # Operacje na drużynach w bazie
+│       ├── teams_db.py   # Operacje na drużynach w bazie
+│       └── security.py   # 🛡️ Rate limiting i zabezpieczenia
 └── README.md             # Dokumentacja
 ```
 
@@ -225,6 +275,7 @@ Każda strona ma własny plik z logiką interfejsu:
 - `list_players.py` - Wyświetlanie listy zapisanych graczy
 - `draw_teams.py` - Interface losowania składów
 - `history.py` - Przeglądanie historii gierek
+- `system_status.py` - � Monitoring systemu i automatyki
 
 #### 🛠️ **src/utils/** - Funkcje pomocnicze
 Podzielone tematycznie dla łatwości utrzymania:
@@ -256,10 +307,25 @@ Podzielone tematycznie dla łatwości utrzymania:
 
 ## 🔒 Bezpieczeństwo
 
-- Hasła są hashowane używając bcrypt
-- Każdy gracz może wypisać się tylko znając swoje hasło
-- Baza danych ma włączone Row Level Security
-- Unikalne ograniczenia na nickname w ramach jednej gierki
+### 🛡️ Zabezpieczenia aplikacji:
+- **Hasła hashowane** - używamy bcrypt z salt
+- **Row Level Security** - Supabase RLS włączone na wszystkich tabelach  
+- **Rate limiting** - maksymalnie 3 zapisy/5 minut, 5 wypisów/5 minut
+- **Walidacja danych** - sanityzacja i walidacja wszystkich inputów
+- **Spam protection** - maksymalnie 50 zapisów na gierkę
+- **Zabronione nazwy** - ochrona przed zastrzeżonymi nickami
+- **Security logging** - logowanie podejrzanych aktywności
+
+### 🔐 Konfiguracja security:
+- **Database triggers** - automatyczna walidacja na poziomie bazy
+- **Input sanitization** - oczyszczanie danych wejściowych
+- **Error masking** - ukrywanie wrażliwych informacji w błędach
+- **Secret masking** - ukrywanie tokenów w logach GitHub Actions
+
+### ⚠️ Ograniczenia darmowych planów:
+- **Supabase**: 500MB bazy, 5GB transferu/miesiąc, pauza po 7 dniach nieaktywności
+- **GitHub Actions**: 2000 minut/miesiąc (używamy ~90)
+- **Streamlit Cloud**: 1 aplikacja, hibernacja po nieaktywności
 
 ## 📝 Licencja
 
