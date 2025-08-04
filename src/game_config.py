@@ -49,6 +49,16 @@ ALLOWED_PLAYER_COUNTS = list(TEAM_CONFIGS.keys())
 # ===== MESSAGES =====
 MANUAL_DRAW_MESSAGE = _config['messages']['manual_draw']
 
+# ===== PAYMENTS =====
+# Treasurer password loaded from Streamlit secrets for security
+import streamlit as st
+try:
+    TREASURER_PASSWORD = st.secrets["treasurer_password"]
+except KeyError:
+    TREASURER_PASSWORD = "default_password"  # Fallback for development
+    
+BLIK_NUMBER = _config['payments']['blik_number']
+
 # Generating messages based on configuration
 _day_names = _config['day_names']
 

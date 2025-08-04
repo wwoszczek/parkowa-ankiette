@@ -40,6 +40,10 @@ teams:
 # ===== KOMUNIKATY =====
 messages:
   manual_draw: "**LOSOWANIE MUSI ODBYĆ SIĘ RĘCZNIE, NIETYPOWA LICZBA UCZESTNIKÓW**"
+
+# ===== ROZLICZENIA =====
+payments:
+  blik_number: "+48724229355"
   
 # Nazwy dni tygodnia (do generowania komunikatów)
 day_names: ["poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota", "niedziela"]

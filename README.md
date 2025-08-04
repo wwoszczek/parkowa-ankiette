@@ -5,15 +5,7 @@ Aplikacja Streamlit do organizowania cotygodniowych gierek piłkarskich z automa
 ## ⚡ Funkcjonalności
 
 ### 🗓️ Automatyczne zarządzanie gierkami
-- - `signup.py` - Formularz zapisów i wypisów
-- `list_players.py` - Wyświetlanie listy zapisanych graczy
-- `draw_teams.py` - Interface losowania składów
-- `history.py` - Przeglądanie historii gierek
-
-#### 🛠️ **src/utils/** - Funkcje pomocniczeb Actions Sche- `signup.py` - Formularz zapisów i wypisów
-- `list_players.py` - Wyświetlanie listy zapisanych graczy
-- `draw_teams.py` - Interface losowania składów
-- `history.py` - Przeglądanie historii gierek** - 🤖 **CAŁKOWICIE NIEZALEŻNY** od UI
+- **GitHub Actions Scheduler** - 🤖 **CAŁKOWICIE NIEZALEŻNY** od UI
 - Gierki tworzone są **4 tygodnie do przodu** automatycznie **3 razy dziennie**
 - **Zero zależności** od odwiedzin użytkowników - działa w chmurze GitHub
 - **Odporność na awarie** - system automatycznie nadrabia zaległości
@@ -33,6 +25,13 @@ Aplikacja Streamlit do organizowania cotygodniowych gierek piłkarskich z automa
   - **18 osób** → 3 drużyny (biała, czerwona, czarna)
   - Inna liczba → komunikat o konieczności ręcznego losowania
 - Możliwość ponownego losowania
+
+### 💰 Rozliczenia (dla skarbnika)
+- **Zabezpieczone hasłem** - hasło w Streamlit secrets, nie w kodzie
+- **Numer BLIK** widoczny dla wszystkich uczestników
+- **Szybki podgląd dłużników** - zestawienie kto ile jest winny
+- **Zarządzanie płatności** - odznaczanie kto zapłacił za historyczne gierki
+- **Bezpieczne logowanie** - session-based authentication
 
 ### 📚 Historia gierek
 - Pełna historia wszystkich gierek
@@ -93,7 +92,20 @@ pip install -r requirements.txt
    python setup_database.py
    ```
 
-### 4. Konfiguracja sekretów
+### 4. Migracja bazy danych (dla istniejących instalacji)
+
+Jeśli masz już działającą aplikację i chcesz dodać funkcję rozliczenia:
+
+```bash
+python migration.py
+```
+
+Sprawdzenie statusu migracji:
+```bash
+python migration.py status
+```
+
+### 5. Konfiguracja sekretów
 
 #### Lokalne uruchomienie
 Edytuj plik `.streamlit/secrets.toml`:

@@ -5,6 +5,7 @@ from src.pages.signup import signup_page
 from src.pages.list_players import list_page
 from src.pages.draw_teams import draw_page
 from src.pages.history import history_page
+from src.pages.payments import payments_page
 
 
 @st.cache_data(ttl=300)  # Cache for 5 minutes
@@ -31,7 +32,7 @@ def main():
         st.session_state.current_page = 'signup'
     
     # Navigation buttons
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
         if st.button("📝 Zapisy", 
@@ -57,6 +58,12 @@ def main():
                     use_container_width=True):
             st.session_state.current_page = 'history'
     
+    with col5:
+        if st.button("💰 Rozliczenia", 
+                    key="nav_payments",
+                    use_container_width=True):
+            st.session_state.current_page = 'payments'
+    
     st.markdown("---")
     
     # Initialize Database (cached)
@@ -74,6 +81,8 @@ def main():
         draw_page(db)
     elif st.session_state.current_page == 'history':
         history_page(db)
+    elif st.session_state.current_page == 'payments':
+        payments_page(db)
 
 
 if __name__ == "__main__":
