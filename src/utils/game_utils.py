@@ -11,10 +11,10 @@ from src.utils.datetime_utils import get_next_game_time, parse_game_time
 
 
 @st.cache_data(ttl=60)  # Cache for 1 minute
-def get_active_games(db: NeonDB):
+def get_active_games(_db: NeonDB):
     """Get active games with caching"""
     try:
-        return db.execute_query("SELECT * FROM games WHERE active = TRUE ORDER BY start_time")
+        return _db.execute_query("SELECT * FROM games WHERE active = TRUE ORDER BY start_time")
     except Exception as e:
         st.error(f"Błąd podczas pobierania aktywnych gierek: {e}")
         return []
