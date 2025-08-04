@@ -10,7 +10,7 @@ from src.config import TIMEZONE
 from src.utils.game_utils import get_past_games
 from src.utils.signup_utils import get_signups_for_game
 from src.utils.teams_db import get_teams_for_game
-from src.utils.datetime_utils import parse_game_time
+from src.utils.datetime_utils import parse_game_time, parse_timestamp
 
 
 def display_history_teams(teams_dict: dict):
@@ -74,7 +74,7 @@ def history_page(db: NeonDB):
                         {
                             "Lp.": i+1,
                             "Nickname": signup['nickname'],
-                            "Czas zapisu": datetime.fromisoformat(signup['timestamp'].replace('Z', '+00:00')).astimezone(TIMEZONE).strftime('%d.%m.%Y %H:%M:%S')
+                            "Czas zapisu": parse_timestamp(signup['timestamp']).strftime('%d.%m.%Y %H:%M:%S')
                         }
                         for i, signup in enumerate(signups)
                     ])

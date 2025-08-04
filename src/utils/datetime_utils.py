@@ -33,6 +33,15 @@ def parse_game_time(start_time):
         return start_time.astimezone(TIMEZONE)
 
 
+def parse_timestamp(timestamp):
+    """Safely parse timestamp from database, handling both string and datetime objects"""
+    if isinstance(timestamp, str):
+        return datetime.fromisoformat(timestamp.replace('Z', '+00:00')).astimezone(TIMEZONE)
+    else:
+        # timestamp is already a datetime object
+        return timestamp.astimezone(TIMEZONE)
+
+
 def get_last_signup_opening():
     """Gets the date of the last signup opening"""
     now = datetime.now(TIMEZONE)
