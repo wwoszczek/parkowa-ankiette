@@ -10,6 +10,7 @@ from src.config import TIMEZONE
 from src.utils.game_utils import get_past_games
 from src.utils.signup_utils import get_signups_for_game
 from src.utils.teams_db import get_teams_for_game
+from src.utils.datetime_utils import parse_game_time
 
 
 def display_history_teams(teams_dict: dict):
@@ -61,7 +62,7 @@ def history_page(db: NeonDB):
             return
         
         for game in past_games:
-            game_time = datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE)
+            game_time = parse_game_time(game['start_time'])
             
             with st.expander(f"Gierka z {game_time.strftime('%d.%m.%Y %H:%M')}"):
                 # List of signups

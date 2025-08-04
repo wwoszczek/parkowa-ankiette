@@ -24,6 +24,15 @@ def get_next_game_time():
     return next_game.replace(hour=GAME_START_HOUR, minute=GAME_START_MINUTE, second=0, microsecond=0)
 
 
+def parse_game_time(start_time):
+    """Safely parse game start_time from database, handling both string and datetime objects"""
+    if isinstance(start_time, str):
+        return datetime.fromisoformat(start_time.replace('Z', '+00:00')).astimezone(TIMEZONE)
+    else:
+        # start_time is already a datetime object
+        return start_time.astimezone(TIMEZONE)
+
+
 def get_last_signup_opening():
     """Gets the date of the last signup opening"""
     now = datetime.now(TIMEZONE)

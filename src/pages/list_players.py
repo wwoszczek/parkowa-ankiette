@@ -9,6 +9,7 @@ from src.database import NeonDB
 from src.config import TIMEZONE
 from src.utils.game_utils import get_active_games
 from src.utils.signup_utils import get_signups_for_game
+from src.utils.datetime_utils import parse_game_time
 
 
 def list_page(db: NeonDB):
@@ -23,7 +24,7 @@ def list_page(db: NeonDB):
         return
     
     for game in active_games:
-        game_time = datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE)
+        game_time = parse_game_time(game['start_time'])
         st.subheader(f"Gierka: {game_time.strftime('%d.%m.%Y %H:%M')}")
         
         signups = get_signups_for_game(db, game['id'])

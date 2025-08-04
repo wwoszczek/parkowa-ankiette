@@ -6,7 +6,7 @@ import streamlit as st
 from datetime import datetime
 from src.database import NeonDB
 from src.config import TIMEZONE
-from src.utils.datetime_utils import is_draw_time_allowed
+from src.utils.datetime_utils import is_draw_time_allowed, parse_game_time
 from src.utils.game_utils import get_active_games
 from src.utils.signup_utils import get_signups_for_game
 from src.utils.team_utils import draw_teams, is_valid_player_count
@@ -67,7 +67,7 @@ def draw_page(db: NeonDB):
         return
     
     for game in active_games:
-        game_time = datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE)
+        game_time = parse_game_time(game['start_time'])
         st.subheader(f"Gierka: {game_time.strftime('%d.%m.%Y %H:%M')}")
         
         signups = get_signups_for_game(db, game['id'])

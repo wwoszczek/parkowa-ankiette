@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from src.database import NeonDB
 from src.config import TIMEZONE
-from src.utils.datetime_utils import get_next_game_time
+from src.utils.datetime_utils import get_next_game_time, parse_game_time
 
 
 def create_new_game_if_needed(db: NeonDB):
@@ -19,7 +19,7 @@ def create_new_game_if_needed(db: NeonDB):
         active_games = db.execute_query("SELECT * FROM games WHERE active = TRUE")
         
         active_games_today = [game for game in active_games 
-                             if datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE).date() == next_game.date()]
+                             if parse_game_time(game['start_time']).date() == next_game.date()]
         
         if not active_games_today:
             # Create new game
@@ -47,7 +47,7 @@ def deactivate_past_games(db: NeonDB):
         active_games = db.execute_query("SELECT * FROM games WHERE active = TRUE")
         
         for game in active_games:
-            game_time = datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE)
+            game_time = parse_game_time(game['start_time'])
             if game_time <= now:
                 db.execute_query(
                     "UPDATE games SET active = FALSE WHERE id = %s",

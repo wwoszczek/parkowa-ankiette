@@ -28,7 +28,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 try:
     from src.config import TIMEZONE
-    from src.utils.datetime_utils import get_next_game_time
+    from src.utils.datetime_utils import get_next_game_time, parse_game_time
     from src.game_config import load_config
 except ImportError as e:
     logger.error(f"Błąd importu: {e}")
@@ -67,7 +67,7 @@ def deactivate_past_games(connection) -> int:
         
         deactivated_count = 0
         for game in active_games:
-            game_time = datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE)
+            game_time = parse_game_time(game['start_time'])
             
             # Dezaktywuj jeśli gierka już się odbyła
             if game_time <= now:
@@ -119,7 +119,7 @@ def create_game_for_week(connection, weeks_ahead: int) -> bool:
         existing_games = execute_query(connection, "SELECT * FROM games")
         
         for game in existing_games:
-            existing_time = datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE)
+            existing_time = parse_game_time(game['start_time'])
             if existing_time.date() == game_time.date():
                 return False
         

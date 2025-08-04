@@ -8,6 +8,7 @@ from src.database import NeonDB
 from src.config import TIMEZONE
 from src.utils.game_utils import get_active_games
 from src.utils.signup_utils import add_signup, remove_signup
+from src.utils.datetime_utils import parse_game_time
 from src.utils.security import (
     RateLimiter, 
     validate_nickname, 
@@ -32,7 +33,7 @@ def signup_page(db: NeonDB):
     # Game selection
     game_options = []
     for game in active_games:
-        game_time = datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE)
+        game_time = parse_game_time(game['start_time'])
         game_options.append(f"{game_time.strftime('%d.%m.%Y %H:%M')} - {game['id']}")
     
     selected_game_str = st.selectbox("Wybierz gierkę:", game_options)
