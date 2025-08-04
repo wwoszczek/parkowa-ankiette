@@ -51,8 +51,8 @@ def signup_page(db: NeonDB):
         st.subheader("Zapisz się")
         
         # Check rate limiting
-        if not RateLimiter.check_signup_rate_limit("signup_attempts", 3, 5):
-            cooldown = RateLimiter.get_remaining_cooldown("signup_attempts", 5)
+        if not RateLimiter.check_signup_rate_limit("signup_attempts", 150, 250):
+            cooldown = RateLimiter.get_remaining_cooldown("signup_attempts", 250)
             st.error(f"⏰ Za dużo prób zapisu. Spróbuj ponownie za {cooldown} sekund.")
             log_security_event("rate_limit", f"signup attempts exceeded")
             return
@@ -95,8 +95,8 @@ def signup_page(db: NeonDB):
         st.subheader("Wypisz się")
         
         # Check rate limiting (separate limit for signouts)
-        if not RateLimiter.check_signup_rate_limit("signout_attempts", 5, 5):
-            cooldown = RateLimiter.get_remaining_cooldown("signout_attempts", 5)
+        if not RateLimiter.check_signup_rate_limit("signout_attempts", 250, 250):
+            cooldown = RateLimiter.get_remaining_cooldown("signout_attempts", 250)
             st.error(f"⏰ Za dużo prób wypisu. Spróbuj ponownie za {cooldown} sekund.")
             log_security_event("rate_limit", f"signout attempts exceeded")
             return
