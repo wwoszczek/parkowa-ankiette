@@ -32,16 +32,18 @@ def signup_page(db: NeonDB):
     
     # Game selection
     game_options = []
+    game_mapping = {}
     for game in active_games:
         game_time = parse_game_time(game['start_time'])
-        game_options.append(f"{game_time.strftime('%d.%m.%Y %H:%M')} - {game['id']}")
+        display_name = game_time.strftime('%d.%m.%Y %H:%M')
+        game_options.append(display_name)
+        game_mapping[display_name] = game
     
     selected_game_str = st.selectbox("Wybierz gierkę:", game_options)
     if not selected_game_str:
         return
     
-    selected_game_id = selected_game_str.split(" - ")[1]
-    selected_game = next(game for game in active_games if game['id'] == selected_game_id)
+    selected_game = game_mapping[selected_game_str]
     
     col1, col2 = st.columns(2)
     
@@ -80,7 +82,7 @@ def signup_page(db: NeonDB):
                     return
                 
                 # Signup attempt
-                success, message = add_signup(db, selected_game_id, nickname, password)
+                success, message = add_signup(db, selected_game['id'], nickname, password)
                 if success:
                     st.success(message)
                     log_security_event("successful_signup", f"nickname: {nickname}")
@@ -115,7 +117,7 @@ def signup_page(db: NeonDB):
                     return
                 
                 # Signout attempt
-                success, message = remove_signup(db, selected_game_id, nickname_out, password_out)
+                success, message = remove_signup(db, selected_game['id'], nickname_out, password_out)
                 if success:
                     st.success(message)
                     log_security_event("successful_signout", f"nickname: {nickname_out}")

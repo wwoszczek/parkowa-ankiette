@@ -13,6 +13,11 @@ def main():
     setup_page_config()
     
     st.title("⚽ Parkowa Ankieta - Cotygodniowe Gierki")
+    
+    # Next game information in header
+    next_game_time = get_next_game_time()
+    st.info(f"📅 **Najbliższa gierka:** {next_game_time.strftime('%d.%m.%Y %H:%M')}")
+    
     st.markdown("---")
     
     # Initialize Database
@@ -21,26 +26,19 @@ def main():
         st.error("Nie można połączyć się z bazą danych!")
         return
 
-    # Navigation sidebar
-    st.sidebar.title("Nawigacja")
-    page = st.sidebar.radio(
-        "Wybierz stronę:",
-        ["Zapisy", "Lista", "Losowanie", "Historia"]
-    )
+    # Navigation with tabs
+    tab1, tab2, tab3, tab4 = st.tabs(["📝 Zapisy", "📋 Lista", "🎲 Losowanie", "📚 Historia"])
     
-    # Next game information
-    next_game_time = get_next_game_time()
-    st.sidebar.markdown("### 📅 Najbliższa gierka:")
-    st.sidebar.info(f"{next_game_time.strftime('%d.%m.%Y %H:%M')}")
-    
-    # Page routing
-    if page == "Zapisy":
+    with tab1:
         signup_page(db)
-    elif page == "Lista":
+    
+    with tab2:
         list_page(db)
-    elif page == "Losowanie":
+    
+    with tab3:
         draw_page(db)
-    elif page == "Historia":
+    
+    with tab4:
         history_page(db)
 
 
