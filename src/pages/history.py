@@ -5,7 +5,7 @@ Game history page
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from supabase import Client
+from src.database import NeonDB
 from src.config import TIMEZONE
 from src.utils.game_utils import get_past_games
 from src.utils.signup_utils import get_signups_for_game
@@ -48,13 +48,13 @@ def display_history_teams(teams_dict: dict):
                 st.write(f"• {player}")
 
 
-def history_page(supabase: Client):
+def history_page(db: NeonDB):
     """History page"""
     st.header("📚 Historia gierek")
     
     try:
         # Get all inactive games
-        past_games = get_past_games(supabase)
+        past_games = get_past_games(db)
         
         if not past_games:
             st.info("Brak gierek w historii.")
@@ -65,7 +65,7 @@ def history_page(supabase: Client):
             
             with st.expander(f"Gierka z {game_time.strftime('%d.%m.%Y %H:%M')}"):
                 # List of signups
-                signups = get_signups_for_game(supabase, game['id'])
+                signups = get_signups_for_game(db, game['id'])
                 
                 if signups:
                     st.subheader("Lista zapisanych:")
@@ -83,7 +83,7 @@ def history_page(supabase: Client):
                     st.info("Brak zapisów.")
                 
                 # Team lineups
-                teams = get_teams_for_game(supabase, game['id'])
+                teams = get_teams_for_game(db, game['id'])
                 if teams:
                     st.subheader("Składy drużyn:")
                     

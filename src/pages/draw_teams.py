@@ -4,7 +4,7 @@ Page for drawing team lineups
 
 import streamlit as st
 from datetime import datetime
-from supabase import Client
+from src.database import NeonDB
 from src.config import TIMEZONE
 from src.utils.datetime_utils import is_draw_time_allowed
 from src.utils.game_utils import get_active_games
@@ -50,7 +50,7 @@ def display_teams(teams_dict: dict):
                 st.write(f"{i}. {player}")
 
 
-def draw_page(supabase: Client):
+def draw_page(db: NeonDB):
     """Team lineup drawing page"""
     st.header("🎲 Losowanie składów")
     
@@ -60,7 +60,7 @@ def draw_page(supabase: Client):
         return
     
     # Get active games
-    active_games = get_active_games(supabase)
+    active_games = get_active_games(db)
     
     if not active_games:
         st.warning("Brak aktywnych gierek.")
@@ -70,7 +70,7 @@ def draw_page(supabase: Client):
         game_time = datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE)
         st.subheader(f"Gierka: {game_time.strftime('%d.%m.%Y %H:%M')}")
         
-        signups = get_signups_for_game(supabase, game['id'])
+        signups = get_signups_for_game(db, game['id'])
         num_players = len(signups)
         
         st.info(f"Zapisanych graczy: {num_players}")
@@ -80,14 +80,14 @@ def draw_page(supabase: Client):
                 players = [signup['nickname'] for signup in signups]
                 teams = draw_teams(players, num_players)
                 
-                if save_teams(supabase, game['id'], teams):
+                if save_teams(db, game['id'], teams):
                     st.success("Składy wylosowane pomyślnie!")
                     st.rerun()
         else:
             st.error(MANUAL_DRAW_MESSAGE)
         
         # Show current lineups if they exist
-        teams = get_teams_for_game(supabase, game['id'])
+        teams = get_teams_for_game(db, game['id'])
         if teams:
             st.subheader("Wylosowane składy:")
             

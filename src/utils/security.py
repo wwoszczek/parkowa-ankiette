@@ -5,7 +5,6 @@ Rate limiting and additional security measures
 import streamlit as st
 import time
 from datetime import datetime, timedelta
-from supabase import Client
 from src.config import TIMEZONE
 
 

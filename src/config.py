@@ -1,21 +1,22 @@
 """
-Application configuration and Supabase initialization
+Application configuration and Neon PostgreSQL initialization
 """
 
 import streamlit as st
 import pytz
-from supabase import create_client, Client
+from src.database import get_db
 
 # Timezone configuration
 TIMEZONE = pytz.timezone('Europe/Warsaw')
 
 @st.cache_resource
-def init_supabase() -> Client:
-    """Initialize Supabase client"""
+def init_database():
+    """Initialize Neon database connection"""
     try:
-        url = st.secrets["supabase"]["url"]
-        key = st.secrets["supabase"]["key"]
-        return create_client(url, key)
+        db = get_db()
+        # Test connection
+        db.execute_query("SELECT 1")
+        return db
     except Exception as e:
         st.error(f"Błąd połączenia z bazą danych: {e}")
         return None

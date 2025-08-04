@@ -4,35 +4,32 @@ Functions for handling teams in the database
 
 import streamlit as st
 import uuid
-from supabase import Client
+from src.database import NeonDB
 
 
-def save_teams(supabase: Client, game_id: str, teams: dict):
+def save_teams(db: NeonDB, game_id: str, teams: dict):
     """Saves team lineups to database"""
     try:
         # Remove previous lineups for this game
-        supabase.table('teams').delete().eq('game_id', game_id).execute()
+        db.execute_query("DELETE FROM teams WHERE game_id = %s", (game_id,))
         
         # Add new lineups
         for color, players in teams.items():
-            team = {
-                'id': str(uuid.uuid4()),
-                'game_id': game_id,
-                'team_color': color,
-                'players': players
-            }
-            supabase.table('teams').insert(team).execute()
+            team_id = str(uuid.uuid4())
+            db.execute_query(
+                "INSERT INTO teams (id, game_id, team_color, players) VALUES (%s, %s, %s, %s)",
+                (team_id, game_id, color, str(players))  # Store players as JSON string
+            )
         return True
     except Exception as e:
         st.error(f"Błąd podczas zapisywania składów: {e}")
         return False
 
 
-def get_teams_for_game(supabase: Client, game_id: str):
+def get_teams_for_game(db: NeonDB, game_id: str):
     """Gets team lineups for a given game"""
     try:
-        response = supabase.table('teams').select('*').eq('game_id', game_id).execute()
-        return response.data
+        return db.execute_query("SELECT * FROM teams WHERE game_id = %s", (game_id,))
     except Exception as e:
         st.error(f"Błąd podczas pobierania składów: {e}")
         return []

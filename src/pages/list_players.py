@@ -1,22 +1,22 @@
 """
-Page with list of signed up players
+Page for listing signed up players for each game
 """
 
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from supabase import Client
+from src.database import NeonDB
 from src.config import TIMEZONE
 from src.utils.game_utils import get_active_games
 from src.utils.signup_utils import get_signups_for_game
 
 
-def list_page(supabase: Client):
+def list_page(db: NeonDB):
     """Page with list of signed up players"""
     st.header("📋 Lista zapisanych")
     
     # Get active games
-    active_games = get_active_games(supabase)
+    active_games = get_active_games(db)
     
     if not active_games:
         st.warning("Brak aktywnych gierek.")
@@ -26,7 +26,7 @@ def list_page(supabase: Client):
         game_time = datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE)
         st.subheader(f"Gierka: {game_time.strftime('%d.%m.%Y %H:%M')}")
         
-        signups = get_signups_for_game(supabase, game['id'])
+        signups = get_signups_for_game(db, game['id'])
         
         if signups:
             df = pd.DataFrame([

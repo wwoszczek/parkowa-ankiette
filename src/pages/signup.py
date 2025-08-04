@@ -4,7 +4,7 @@ Game signup page
 
 import streamlit as st
 from datetime import datetime
-from supabase import Client
+from src.database import NeonDB
 from src.config import TIMEZONE
 from src.utils.game_utils import get_active_games
 from src.utils.signup_utils import add_signup, remove_signup
@@ -18,12 +18,12 @@ from src.utils.security import (
 from src.game_config import SIGNUP_OPENING_MESSAGE
 
 
-def signup_page(supabase: Client):
+def signup_page(db: NeonDB):
     """Signup page"""
     st.header("⚽ Zapisy na gierkę")
     
     # Get active games
-    active_games = get_active_games(supabase)
+    active_games = get_active_games(db)
     
     if not active_games:
         st.warning(f"Brak aktywnych gierek. {SIGNUP_OPENING_MESSAGE}")
@@ -79,7 +79,7 @@ def signup_page(supabase: Client):
                     return
                 
                 # Signup attempt
-                success, message = add_signup(supabase, selected_game_id, nickname, password)
+                success, message = add_signup(db, selected_game_id, nickname, password)
                 if success:
                     st.success(message)
                     log_security_event("successful_signup", f"nickname: {nickname}")
@@ -114,7 +114,7 @@ def signup_page(supabase: Client):
                     return
                 
                 # Signout attempt
-                success, message = remove_signup(supabase, selected_game_id, nickname_out, password_out)
+                success, message = remove_signup(db, selected_game_id, nickname_out, password_out)
                 if success:
                     st.success(message)
                     log_security_event("successful_signout", f"nickname: {nickname_out}")

@@ -1,5 +1,5 @@
 import streamlit as st
-from src.config import setup_page_config, init_supabase
+from src.config import setup_page_config, init_database
 from src.utils.datetime_utils import get_next_game_time
 from src.pages.signup import signup_page
 from src.pages.list_players import list_page
@@ -15,9 +15,9 @@ def main():
     st.title("⚽ Parkowa Ankieta - Cotygodniowe Gierki")
     st.markdown("---")
     
-    # Initialize Supabase
-    supabase = init_supabase()
-    if not supabase:
+    # Initialize Database
+    db = init_database()
+    if not db:
         st.error("Nie można połączyć się z bazą danych!")
         return
 
@@ -38,13 +38,13 @@ def main():
     
     # Page routing
     if page == "Zapisy":
-        signup_page(supabase)
+        signup_page(db)
     elif page == "Lista":
-        list_page(supabase)
+        list_page(db)
     elif page == "Losowanie":
-        draw_page(supabase)
+        draw_page(db)
     elif page == "Historia":
-        history_page(supabase)
+        history_page(db)
 
 
 if __name__ == "__main__":

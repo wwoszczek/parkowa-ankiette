@@ -5,67 +5,71 @@ Functions for handling games in the database
 import streamlit as st
 import uuid
 from datetime import datetime
-from supabase import Client
+from src.database import NeonDB
 from src.config import TIMEZONE
 from src.utils.datetime_utils import get_next_game_time
 
 
-def create_new_game_if_needed(supabase: Client):
+def create_new_game_if_needed(db: NeonDB):
     """Creates new game if needed"""
     try:
         next_game = get_next_game_time()
         
         # Check if active game already exists for this day
-        response = supabase.table('games').select('*').eq('active', True).execute()
+        active_games = db.execute_query("SELECT * FROM games WHERE active = TRUE")
         
-        active_games = [game for game in response.data 
-                       if datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE).date() == next_game.date()]
+        active_games_today = [game for game in active_games 
+                             if datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE).date() == next_game.date()]
         
-        if not active_games:
+        if not active_games_today:
             # Create new game
-            new_game = {
-                'id': str(uuid.uuid4()),
+            new_game_id = str(uuid.uuid4())
+            db.execute_query(
+                "INSERT INTO games (id, start_time, active) VALUES (%s, %s, %s)",
+                (new_game_id, next_game.isoformat(), True)
+            )
+            return {
+                'id': new_game_id,
                 'start_time': next_game.isoformat(),
                 'active': True
             }
-            supabase.table('games').insert(new_game).execute()
-            return new_game
         
-        return active_games[0]
+        return active_games_today[0]
     except Exception as e:
         st.error(f"Błąd podczas tworzenia nowej gierki: {e}")
         return None
 
 
-def deactivate_past_games(supabase: Client):
+def deactivate_past_games(db: NeonDB):
     """Deactivates games that have already taken place"""
     try:
         now = datetime.now(TIMEZONE)
-        response = supabase.table('games').select('*').eq('active', True).execute()
+        active_games = db.execute_query("SELECT * FROM games WHERE active = TRUE")
         
-        for game in response.data:
+        for game in active_games:
             game_time = datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE)
             if game_time <= now:
-                supabase.table('games').update({'active': False}).eq('id', game['id']).execute()
+                db.execute_query(
+                    "UPDATE games SET active = FALSE WHERE id = %s",
+                    (game['id'],)
+                )
     except Exception as e:
         st.error(f"Błąd podczas dezaktywacji gierek: {e}")
 
 
-def get_active_games(supabase: Client):
+def get_active_games(db: NeonDB):
     """Gets active games"""
     try:
-        response = supabase.table('games').select('*').eq('active', True).order('start_time').execute()
-        return response.data
+        return db.execute_query("SELECT * FROM games WHERE active = TRUE ORDER BY start_time")
     except Exception as e:
         st.error(f"Błąd podczas pobierania gierek: {e}")
         return []
 
 
-def get_past_games(supabase: Client):
+def get_past_games(db: NeonDB):
     """Gets inactive games (history)"""
     try:
-        response = supabase.table('games').select('*').eq('active', False).order('start_time', desc=True).execute()
-        return response.data
+        return db.execute_query("SELECT * FROM games WHERE active = FALSE ORDER BY start_time DESC")
     except Exception as e:
         st.error(f"Błąd podczas pobierania historii gierek: {e}")
         return []

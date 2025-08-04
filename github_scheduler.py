@@ -9,7 +9,8 @@ import sys
 import logging
 from datetime import datetime, timedelta
 import uuid
-from supabase import create_client, Client
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 # Logging configuration
 logging.basicConfig(
@@ -34,34 +35,47 @@ except ImportError as e:
     sys.exit(1)
 
 
-def get_supabase_client() -> Client:
-    """Initialize Supabase client from GitHub Secrets"""
-    url = os.getenv('SUPABASE_URL')
-    key = os.getenv('SUPABASE_KEY')
+def get_database_connection():
+    """Get database connection from GitHub Secrets"""
+    database_url = os.getenv('NEON_DATABASE_URL')
     
-    if not url or not key:
-        raise ValueError("❌ Brak zmiennych SUPABASE_URL i SUPABASE_KEY w GitHub Secrets")
+    if not database_url:
+        raise ValueError("❌ Brak zmiennej NEON_DATABASE_URL w GitHub Secrets")
     
-    logger.info("✅ Łączenie z Supabase...")
-    return create_client(url, key)
+    logger.info("✅ Łączenie z Neon PostgreSQL...")
+    return psycopg2.connect(database_url, cursor_factory=RealDictCursor, sslmode='require')
 
 
-def deactivate_past_games(supabase: Client) -> int:
+def execute_query(connection, query: str, params=None):
+    """Execute query and return results"""
+    with connection.cursor() as cur:
+        cur.execute(query, params)
+        if query.strip().lower().startswith('select'):
+            return [dict(row) for row in cur.fetchall()]
+        connection.commit()
+        return cur.rowcount
+
+
+def deactivate_past_games(connection) -> int:
     """Deactivate past games"""
     logger.info("🔍 Sprawdzanie przeszłych gierek do dezaktywacji...")
     now = datetime.now(TIMEZONE)
     
     try:
         # Pobierz aktywne gierki
-        response = supabase.table('games').select('*').eq('active', True).execute()
+        active_games = execute_query(connection, "SELECT * FROM games WHERE active = TRUE")
         
         deactivated_count = 0
-        for game in response.data:
+        for game in active_games:
             game_time = datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE)
             
             # Dezaktywuj jeśli gierka już się odbyła
             if game_time <= now:
-                supabase.table('games').update({'active': False}).eq('id', game['id']).execute()
+                execute_query(
+                    connection, 
+                    "UPDATE games SET active = FALSE WHERE id = %s",
+                    (game['id'],)
+                )
                 logger.info(f"🔴 Dezaktywowano gierkę z {game_time.strftime('%d.%m.%Y %H:%M')}")
                 deactivated_count += 1
         
@@ -75,7 +89,7 @@ def deactivate_past_games(supabase: Client) -> int:
         raise
 
 
-def create_upcoming_games(supabase: Client) -> int:
+def create_upcoming_games(connection) -> int:
     """Create games for next 4 weeks"""
     logger.info("🏗️ Sprawdzanie czy potrzeba utworzyć nowe gierki...")
     
@@ -83,7 +97,7 @@ def create_upcoming_games(supabase: Client) -> int:
     
     try:
         for weeks_ahead in range(4):
-            if create_game_for_week(supabase, weeks_ahead):
+            if create_game_for_week(connection, weeks_ahead):
                 created_count += 1
         
         if created_count == 0:
@@ -96,113 +110,110 @@ def create_upcoming_games(supabase: Client) -> int:
         raise
 
 
-def create_game_for_week(supabase: Client, weeks_ahead: int) -> bool:
-    """Create game for specific week in the future"""
+def create_game_for_week(connection, weeks_ahead: int) -> bool:
+    """Create game for specific week if it doesn't exist"""
     try:
-        base_game_time = get_next_game_time()
-        game_time = base_game_time + timedelta(weeks=weeks_ahead)
+        game_time = get_next_game_time() + timedelta(weeks=weeks_ahead)
         
-        # Check if game already exists
-        response = supabase.table('games').select('*').execute()
-        existing_games = [
-            game for game in response.data 
-            if datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE).date() == game_time.date()
-        ]
+        # Sprawdź czy gierka już istnieje
+        existing_games = execute_query(connection, "SELECT * FROM games")
         
-        if not existing_games:
-            # Create new game
-            new_game = {
-                'id': str(uuid.uuid4()),
-                'start_time': game_time.isoformat(),
-                'active': True
-            }
-            supabase.table('games').insert(new_game).execute()
-            logger.info(f"🟢 Utworzono gierkę na {game_time.strftime('%d.%m.%Y %H:%M')}")
-            return True
+        for game in existing_games:
+            existing_time = datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE)
+            if existing_time.date() == game_time.date():
+                return False
         
-        return False
+        # Utwórz nową gierkę
+        new_game_id = str(uuid.uuid4())
+        execute_query(
+            connection,
+            "INSERT INTO games (id, start_time, active) VALUES (%s, %s, %s)",
+            (new_game_id, game_time.isoformat(), True)
+        )
+        
+        logger.info(f"🆕 Utworzono nową gierkę na {game_time.strftime('%d.%m.%Y %H:%M')}")
+        return True
         
     except Exception as e:
-        logger.error(f"❌ Błąd tworzenia gierki na +{weeks_ahead} tygodni: {e}")
-        raise
+        logger.error(f"❌ Błąd tworzenia gierki: {e}")
+        return False
 
 
-def get_scheduler_stats(supabase: Client) -> dict:
-    """Gets scheduler statistics"""
+def get_scheduler_stats(connection) -> dict:
+    """Get current scheduler statistics"""
     try:
-        # Active games
-        active_games = supabase.table('games').select('*').eq('active', True).execute()
+        # Aktywne gierki
+        active_games = execute_query(connection, "SELECT * FROM games WHERE active = TRUE")
         
-        # Next game
-        now = datetime.now(TIMEZONE)
-        upcoming_games = [
-            game for game in active_games.data
-            if datetime.fromisoformat(game['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE) > now
-        ]
+        # Statystyki zapisów
+        total_signups = 0
+        for game in active_games:
+            signups = execute_query(
+                connection,
+                "SELECT COUNT(*) as count FROM signups WHERE game_id = %s",
+                (game['id'],)
+            )
+            total_signups += signups[0]['count'] if signups else 0
         
-        next_game = None
-        if upcoming_games:
-            next_game_data = min(upcoming_games, 
-                key=lambda g: datetime.fromisoformat(g['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE))
-            next_game = datetime.fromisoformat(next_game_data['start_time'].replace('Z', '+00:00')).astimezone(TIMEZONE)
+        # Wszystkie gierki
+        all_games = execute_query(connection, "SELECT COUNT(*) as count FROM games")
+        total_games_count = all_games[0]['count'] if all_games else 0
         
         return {
-            'active_games_count': len(active_games.data),
-            'upcoming_games_count': len(upcoming_games),
-            'next_game': next_game.strftime('%d.%m.%Y %H:%M') if next_game else 'None',
-            'total_games_count': len(supabase.table('games').select('*').execute().data)
+            'active_games_count': len(active_games),
+            'total_signups': total_signups,
+            'total_games_count': total_games_count
         }
+        
     except Exception as e:
         logger.error(f"❌ Błąd pobierania statystyk: {e}")
-        return {}
+        return {
+            'active_games_count': 0,
+            'total_signups': 0,
+            'total_games_count': 0
+        }
 
 
 def main():
-    """Main function of GitHub Actions scheduler"""
-    start_time = datetime.now(TIMEZONE)
-    logger.info(f"🚀 GitHub Actions Scheduler - start: {start_time.strftime('%d.%m.%Y %H:%M:%S')}")
-    
-    # Check if this is forced run
-    force_run = os.getenv('FORCE_RUN', 'false').lower() == 'true'
-    if force_run:
-        logger.info("⚡ FORCE - full scheduler check")
+    """Main scheduler function"""
+    logger.info("=" * 50)
+    logger.info("🤖 SCHEDULER STARTED")
+    logger.info("=" * 50)
     
     try:
-        # 1. Initialization
-        supabase = get_supabase_client()
+        # Połączenie z bazą danych
+        connection = get_database_connection()
         
-        # 2. Get initial statistics
-        initial_stats = get_scheduler_stats(supabase)
-        logger.info(f"📊 Initial state: {initial_stats['active_games_count']} active games")
+        # Początkowe statystyki
+        initial_stats = get_scheduler_stats(connection)
+        logger.info(f"📊 Stan początkowy: {initial_stats['active_games_count']} aktywnych gierek, {initial_stats['total_signups']} zapisów")
         
-        # 4. Deactivate past games
-        deactivated = deactivate_past_games(supabase)
+        # Dezaktywuj przeszłe gierki
+        deactivated = deactivate_past_games(connection)
         
-        # 5. Create new games
-        created = create_upcoming_games(supabase)
+        # Utwórz nowe gierki
+        created = create_upcoming_games(connection)
         
-        # 6. Get final statistics
-        final_stats = get_scheduler_stats(supabase)
+        # Finalne statystyki
+        final_stats = get_scheduler_stats(connection)
         
-        # 7. Summary
-        end_time = datetime.now(TIMEZONE)
-        duration = (end_time - start_time).total_seconds()
-        
+        # Podsumowanie
         logger.info("=" * 50)
+        logger.info("📈 PODSUMOWANIE:")
+        logger.info(f"   🔴 Dezaktywowano: {deactivated} gierek")
+        logger.info(f"   🆕 Utworzono: {created} nowych gierek")
+        logger.info(f"   📊 Stan końcowy: {final_stats['active_games_count']} aktywnych gierek")
+        logger.info(f"   👥 Łącznie zapisów: {final_stats['total_signups']}")
+        logger.info(f"   🎯 Wszystkich gierek: {final_stats['total_games_count']}")
         logger.info("✅ SCHEDULER COMPLETED SUCCESSFULLY")
-        logger.info(f"⏱️  Execution time: {duration:.2f}s")
-        logger.info(f"🔴 Deactivated: {deactivated} games")
-        logger.info(f"🟢 Created: {created} new games")
-        logger.info(f"📊 Active games: {final_stats['active_games_count']}")
-        logger.info(f"🎯 Next game: {final_stats['next_game']}")
         logger.info("=" * 50)
         
-        # Check if everything is OK
-        if final_stats['upcoming_games_count'] < 4:
-            logger.warning(f"⚠️  Only {final_stats['upcoming_games_count']} upcoming games (should be 4)")
+        connection.close()
         
     except Exception as e:
-        logger.error(f"💥 CRITICAL SCHEDULER ERROR: {e}")
+        logger.error(f"💥 CRITICAL ERROR: {e}")
+        logger.error("❌ SCHEDULER FAILED")
+        logger.info("=" * 50)
         sys.exit(1)
 
 

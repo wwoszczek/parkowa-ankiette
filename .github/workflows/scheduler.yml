@@ -16,8 +16,7 @@ on:
 
 env:
   # Zmienne środowiskowe z GitHub Secrets
-  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-  SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+  NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
 
 jobs:
   scheduler:
@@ -42,7 +41,7 @@ jobs:
     - name: 🚀 Run scheduler
       run: |
         echo "🤖 Uruchamianie schedulera gierek..."
-        python github_scheduler.py 2>&1 | sed 's/supabase\.co[^[:space:]]*/[MASKED_URL]/g; s/eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*/[MASKED_TOKEN]/g'
+        python github_scheduler.py 2>&1 | sed 's/neon\.tech[^[:space:]]*/[MASKED_URL]/g; s/postgresql:\/\/[^[:space:]]*/[MASKED_CONNECTION]/g'
       env:
         FORCE_RUN: ${{ github.event.inputs.force_run }}
     
