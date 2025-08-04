@@ -34,35 +34,27 @@ def main():
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        signup_active = st.session_state.current_page == 'signup'
         if st.button("📝 Zapisy", 
                     key="nav_signup",
-                    use_container_width=True, 
-                    type="primary" if signup_active else "secondary"):
+                    use_container_width=True):
             st.session_state.current_page = 'signup'
     
     with col2:
-        list_active = st.session_state.current_page == 'list'
         if st.button("📋 Lista", 
                     key="nav_list",
-                    use_container_width=True,
-                    type="primary" if list_active else "secondary"):
+                    use_container_width=True):
             st.session_state.current_page = 'list'
     
     with col3:
-        draw_active = st.session_state.current_page == 'draw'
         if st.button("🎲 Losowanie", 
                     key="nav_draw",
-                    use_container_width=True,
-                    type="primary" if draw_active else "secondary"):
+                    use_container_width=True):
             st.session_state.current_page = 'draw'
     
     with col4:
-        history_active = st.session_state.current_page == 'history'
         if st.button("📚 Historia", 
                     key="nav_history",
-                    use_container_width=True,
-                    type="primary" if history_active else "secondary"):
+                    use_container_width=True):
             st.session_state.current_page = 'history'
     
     st.markdown("---")
