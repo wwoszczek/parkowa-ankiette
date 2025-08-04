@@ -53,7 +53,7 @@ MANUAL_DRAW_MESSAGE = _config['messages']['manual_draw']
 _day_names = _config['day_names']
 
 DRAW_NOT_AVAILABLE_MESSAGE = (
-    f"Losowanie składów jest dostępne tylko w {_day_names[DRAW_ALLOWED_DAY]}i "
+    f"Losowanie składów jest dostępne tylko w {_day_names[DRAW_ALLOWED_DAY]} "
     f"od {DRAW_ALLOWED_HOUR:02d}:{DRAW_ALLOWED_MINUTE:02d}!"
 )
 

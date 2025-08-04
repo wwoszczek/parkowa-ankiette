@@ -33,9 +33,6 @@ def main():
     st.sidebar.markdown("### 📅 Najbliższa gierka:")
     st.sidebar.info(f"{next_game_time.strftime('%d.%m.%Y %H:%M')}")
     
-    st.sidebar.markdown("### 🤖 Automatyka:")
-    st.sidebar.success("GitHub Actions\n(3x dziennie)")
-    
     # Page routing
     if page == "Zapisy":
         signup_page(db)
