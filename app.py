@@ -7,6 +7,12 @@ from src.pages.draw_teams import draw_page
 from src.pages.history import history_page
 
 
+@st.cache_data(ttl=300)  # Cache for 5 minutes
+def get_cached_next_game_time():
+    """Cache next game time to avoid recalculation"""
+    return get_next_game_time()
+
+
 def main():
     """Main application function"""
     # Page configuration
@@ -14,8 +20,8 @@ def main():
     
     st.title("⚽ Parkowa Ankieta - Cotygodniowe Gierki")
     
-    # Next game information in header
-    next_game_time = get_next_game_time()
+    # Next game information in header (cached)
+    next_game_time = get_cached_next_game_time()
     st.info(f"📅 **Najbliższa gierka:** {next_game_time.strftime('%d.%m.%Y %H:%M')}")
     
     st.markdown("---")
@@ -49,7 +55,7 @@ def main():
     
     st.markdown("---")
     
-    # Initialize Database
+    # Initialize Database (cached)
     db = init_database()
     if not db:
         st.error("Nie można połączyć się z bazą danych!")

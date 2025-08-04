@@ -19,6 +19,19 @@ from src.utils.security import (
 from src.game_config import SIGNUP_OPENING_MESSAGE
 
 
+@st.cache_data(ttl=30)  # Cache for 30 seconds
+def get_game_options_cached(active_games):
+    """Cache game options to avoid repeated processing"""
+    game_options = []
+    game_mapping = {}
+    for game in active_games:
+        game_time = parse_game_time(game['start_time'])
+        display_name = game_time.strftime('%d.%m.%Y %H:%M')
+        game_options.append(display_name)
+        game_mapping[display_name] = game
+    return game_options, game_mapping
+
+
 def signup_page(db: NeonDB):
     """Signup page"""
     st.header("⚽ Zapisy na gierkę")
@@ -29,15 +42,9 @@ def signup_page(db: NeonDB):
     if not active_games:
         st.warning(f"Brak aktywnych gierek. {SIGNUP_OPENING_MESSAGE}")
         return
-    
-    # Game selection
-    game_options = []
-    game_mapping = {}
-    for game in active_games:
-        game_time = parse_game_time(game['start_time'])
-        display_name = game_time.strftime('%d.%m.%Y %H:%M')
-        game_options.append(display_name)
-        game_mapping[display_name] = game
+
+    # Game selection (cached)
+    game_options, game_mapping = get_game_options_cached(tuple(active_games))  # Convert to tuple for hashing
     
     selected_game_str = st.selectbox("Wybierz gierkę:", game_options)
     if not selected_game_str:

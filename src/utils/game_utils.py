@@ -10,6 +10,16 @@ from src.config import TIMEZONE
 from src.utils.datetime_utils import get_next_game_time, parse_game_time
 
 
+@st.cache_data(ttl=60)  # Cache for 1 minute
+def get_active_games(db: NeonDB):
+    """Get active games with caching"""
+    try:
+        return db.execute_query("SELECT * FROM games WHERE active = TRUE ORDER BY start_time")
+    except Exception as e:
+        st.error(f"Błąd podczas pobierania aktywnych gierek: {e}")
+        return []
+
+
 def create_new_game_if_needed(db: NeonDB):
     """Creates new game if needed"""
     try:
@@ -44,7 +54,7 @@ def deactivate_past_games(db: NeonDB):
     """Deactivates games that have already taken place"""
     try:
         now = datetime.now(TIMEZONE)
-        active_games = db.execute_query("SELECT * FROM games WHERE active = TRUE")
+        active_games = get_active_games(db)  # Use cached version
         
         for game in active_games:
             game_time = parse_game_time(game['start_time'])
@@ -53,17 +63,10 @@ def deactivate_past_games(db: NeonDB):
                     "UPDATE games SET active = FALSE WHERE id = %s",
                     (game['id'],)
                 )
+                # Clear cache after modification
+                get_active_games.clear()
     except Exception as e:
         st.error(f"Błąd podczas dezaktywacji gierek: {e}")
-
-
-def get_active_games(db: NeonDB):
-    """Gets active games"""
-    try:
-        return db.execute_query("SELECT * FROM games WHERE active = TRUE ORDER BY start_time")
-    except Exception as e:
-        st.error(f"Błąd podczas pobierania gierek: {e}")
-        return []
 
 
 def get_past_games(db: NeonDB):
