@@ -3,7 +3,7 @@ Helper functions for date and time handling
 """
 
 from datetime import datetime, timedelta
-from src.config import TIMEZONE
+from src.constants import TIMEZONE
 from src.game_config import (
     GAME_DAY, GAME_START_HOUR, GAME_START_MINUTE,
     SIGNUP_OPEN_DAY, SIGNUP_OPEN_HOUR, SIGNUP_OPEN_MINUTE,

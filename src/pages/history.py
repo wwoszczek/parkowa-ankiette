@@ -6,7 +6,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from src.database import NeonDB
-from src.config import TIMEZONE
+from src.constants import TIMEZONE
 from src.utils.game_utils import get_past_games
 from src.utils.signup_utils import get_signups_for_game
 from src.utils.teams_db import get_teams_for_game

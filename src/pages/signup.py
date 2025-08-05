@@ -5,7 +5,7 @@ Game signup page
 import streamlit as st
 from datetime import datetime
 from src.database import NeonDB
-from src.config import TIMEZONE
+from src.constants import TIMEZONE
 from src.utils.game_utils import get_active_games
 from src.utils.signup_utils import add_signup, remove_signup
 from src.utils.datetime_utils import parse_game_time

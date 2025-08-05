@@ -6,7 +6,7 @@ import streamlit as st
 import uuid
 from datetime import datetime
 from src.database import NeonDB
-from src.config import TIMEZONE
+from src.constants import TIMEZONE
 from src.utils.auth import hash_password, verify_password
 from src.utils.security import sanitize_input, log_security_event
 

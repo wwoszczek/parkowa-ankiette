@@ -5,7 +5,7 @@ Page for drawing team lineups
 import streamlit as st
 from datetime import datetime
 from src.database import NeonDB
-from src.config import TIMEZONE
+from src.constants import TIMEZONE
 from src.utils.datetime_utils import is_draw_time_allowed, parse_game_time
 from src.utils.game_utils import get_active_games
 from src.utils.signup_utils import get_signups_for_game

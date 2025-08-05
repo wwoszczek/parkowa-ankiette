@@ -6,7 +6,7 @@ import streamlit as st
 import uuid
 from datetime import datetime
 from src.database import NeonDB
-from src.config import TIMEZONE
+from src.constants import TIMEZONE
 from src.utils.datetime_utils import get_next_game_time, parse_game_time
 
 

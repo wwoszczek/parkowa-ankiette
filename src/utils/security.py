@@ -5,7 +5,7 @@ Rate limiting and additional security measures
 import streamlit as st
 import time
 from datetime import datetime, timedelta
-from src.config import TIMEZONE
+from src.constants import TIMEZONE
 
 
 class RateLimiter:

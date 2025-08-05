@@ -3,16 +3,13 @@ Application configuration and Neon PostgreSQL initialization
 """
 
 import streamlit as st
-import pytz
-from src.database import get_db
-
-# Timezone configuration
-TIMEZONE = pytz.timezone('Europe/Warsaw')
+from src.constants import TIMEZONE
 
 @st.cache_resource
 def init_database():
     """Initialize Neon database connection"""
     try:
+        from src.database import get_db
         db = get_db()
         # Test connection
         db.execute_query("SELECT 1")
