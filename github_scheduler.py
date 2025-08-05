@@ -11,6 +11,9 @@ from datetime import datetime, timedelta
 import uuid
 import psycopg2
 from psycopg2.extras import RealDictCursor
+import yaml
+import pytz
+from pathlib import Path
 
 # Logging configuration
 logging.basicConfig(
@@ -23,16 +26,105 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Add path to main directory
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# Configuration - load from YAML file directly
+def load_scheduler_config():
+    """Load configuration from YAML file for scheduler"""
+    config_file = Path(__file__).parent / "game_consts.yaml"
+    try:
+        with open(config_file, 'r', encoding='utf-8') as file:
+            config = yaml.safe_load(file)
+            return {
+                'TIMEZONE': pytz.timezone('Europe/Warsaw'),
+                'GAME_DAY': config['game']['day'],
+                'GAME_START_HOUR': config['game']['hour'],
+                'GAME_START_MINUTE': config['game']['minute'],
+                'SIGNUP_OPEN_DAY': config['signup']['day'],
+                'SIGNUP_OPEN_HOUR': config['signup']['hour'],
+                'SIGNUP_OPEN_MINUTE': config['signup']['minute']
+            }
+    except Exception as e:
+        logger.error(f"Błąd wczytywania konfiguracji: {e}")
+        sys.exit(1)
 
-try:
-    from src.config import TIMEZONE
-    from src.utils.datetime_utils import get_next_game_time, parse_game_time
-    from src.game_config import load_config
-except ImportError as e:
-    logger.error(f"Błąd importu: {e}")
-    sys.exit(1)
+# Load config
+CONFIG = load_scheduler_config()
+TIMEZONE = CONFIG['TIMEZONE']
+GAME_DAY = CONFIG['GAME_DAY']
+GAME_START_HOUR = CONFIG['GAME_START_HOUR']
+GAME_START_MINUTE = CONFIG['GAME_START_MINUTE']
+SIGNUP_OPEN_DAY = CONFIG['SIGNUP_OPEN_DAY']
+SIGNUP_OPEN_HOUR = CONFIG['SIGNUP_OPEN_HOUR']
+SIGNUP_OPEN_MINUTE = CONFIG['SIGNUP_OPEN_MINUTE']
+
+
+def get_next_game_time():
+    """Gets the date of the next game"""
+    now = datetime.now(TIMEZONE)
+    days_ahead = GAME_DAY - now.weekday()
+    
+    # If today is game day but after start time, take next week
+    if days_ahead <= 0 or (days_ahead == 0 and now.hour >= GAME_START_HOUR):
+        days_ahead += 7
+    
+    next_game = now + timedelta(days=days_ahead)
+    return next_game.replace(hour=GAME_START_HOUR, minute=GAME_START_MINUTE, second=0, microsecond=0)
+
+
+def parse_game_time(start_time):
+    """Safely parse game start_time from database, handling both string and datetime objects"""
+    if isinstance(start_time, str):
+        return datetime.fromisoformat(start_time.replace('Z', '+00:00')).astimezone(TIMEZONE)
+    else:
+        # start_time is already a datetime object
+        return start_time.astimezone(TIMEZONE)
+
+
+def get_signup_opening_time(game_time):
+    """Calculate when signups open for a given game"""
+    # Zapisy otwierają się w określony dzień tygodnia przed gierką
+    days_to_signup = game_time.weekday() - SIGNUP_OPEN_DAY
+    
+    # Jeśli dzień zapisów jest później w tygodniu niż gierka, 
+    # albo to ten sam dzień ale po godzinie, bierz poprzedni tydzień
+    if days_to_signup <= 0:
+        days_to_signup += 7
+    
+    signup_open = game_time - timedelta(days=days_to_signup)
+    return signup_open.replace(hour=SIGNUP_OPEN_HOUR, minute=SIGNUP_OPEN_MINUTE, second=0, microsecond=0)
+
+
+def activate_games_for_signup(connection) -> int:
+    """Activate games when their signup period should open"""
+    logger.info("🔍 Sprawdzanie gierek do aktywacji...")
+    now = datetime.now(TIMEZONE)
+    
+    try:
+        # Pobierz nieaktywne gierki
+        inactive_games = execute_query(connection, "SELECT * FROM games WHERE active = FALSE")
+        
+        activated_count = 0
+        for game in inactive_games:
+            game_time = parse_game_time(game['start_time'])
+            signup_open_time = get_signup_opening_time(game_time)
+            
+            # Aktywuj jeśli zapisy już powinny być otwarte
+            if now >= signup_open_time:
+                execute_query(
+                    connection, 
+                    "UPDATE games SET active = TRUE WHERE id = %s",
+                    (game['id'],)
+                )
+                logger.info(f"🟢 Aktywowano gierkę z {game_time.strftime('%d.%m.%Y %H:%M')} (zapisy otwarte od {signup_open_time.strftime('%d.%m.%Y %H:%M')})")
+                activated_count += 1
+        
+        if activated_count == 0:
+            logger.info("✅ Brak gierek do aktywacji")
+        
+        return activated_count
+        
+    except Exception as e:
+        logger.error(f"❌ Błąd aktywacji gierek: {e}")
+        raise
 
 
 def get_database_connection():
@@ -90,18 +182,18 @@ def deactivate_past_games(connection) -> int:
 
 
 def create_upcoming_games(connection) -> int:
-    """Create games for next 4 weeks"""
+    """Create games for next 2 weeks"""
     logger.info("🏗️ Sprawdzanie czy potrzeba utworzyć nowe gierki...")
     
     created_count = 0
     
     try:
-        for weeks_ahead in range(4):
+        for weeks_ahead in range(2):
             if create_game_for_week(connection, weeks_ahead):
                 created_count += 1
         
         if created_count == 0:
-            logger.info("✅ Wszystkie gierki na kolejne 4 tygodnie już istnieją")
+            logger.info("✅ Wszystkie gierki na kolejne 2 tygodnie już istnieją")
         
         return created_count
         
@@ -123,15 +215,15 @@ def create_game_for_week(connection, weeks_ahead: int) -> bool:
             if existing_time.date() == game_time.date():
                 return False
         
-        # Utwórz nową gierkę
+        # Utwórz nową gierkę (nieaktywną do momentu otwarcia zapisów)
         new_game_id = str(uuid.uuid4())
         execute_query(
             connection,
             "INSERT INTO games (id, start_time, active) VALUES (%s, %s, %s)",
-            (new_game_id, game_time.isoformat(), True)
+            (new_game_id, game_time.isoformat(), False)
         )
         
-        logger.info(f"🆕 Utworzono nową gierkę na {game_time.strftime('%d.%m.%Y %H:%M')}")
+        logger.info(f"🆕 Utworzono nową gierkę na {game_time.strftime('%d.%m.%Y %H:%M')} (nieaktywna)")
         return True
         
     except Exception as e:
@@ -191,6 +283,9 @@ def main():
         # Dezaktywuj przeszłe gierki
         deactivated = deactivate_past_games(connection)
         
+        # Aktywuj gierki dla których już czas na zapisy
+        activated = activate_games_for_signup(connection)
+        
         # Utwórz nowe gierki
         created = create_upcoming_games(connection)
         
@@ -201,6 +296,7 @@ def main():
         logger.info("=" * 50)
         logger.info("📈 PODSUMOWANIE:")
         logger.info(f"   🔴 Dezaktywowano: {deactivated} gierek")
+        logger.info(f"   🟢 Aktywowano: {activated} gierek")
         logger.info(f"   🆕 Utworzono: {created} nowych gierek")
         logger.info(f"   📊 Stan końcowy: {final_stats['active_games_count']} aktywnych gierek")
         logger.info(f"   👥 Łącznie zapisów: {final_stats['total_signups']}")

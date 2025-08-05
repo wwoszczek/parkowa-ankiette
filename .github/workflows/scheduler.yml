@@ -2,10 +2,9 @@ name: 🤖 Automatyczny Scheduler Gierek
 
 on:
   schedule:
-    # Uruchamia się 3 razy dziennie: 8:00, 14:00, 20:00
-    - cron: '0 8,14,20 * * *'
-  
-  # Możliwość ręcznego uruchomienia z GitHub UI
+    # UTC +0:00 - keep in mind
+    - cron: '0 6,12,15,21 * * *'
+
   workflow_dispatch:
     inputs:
       force_run:
@@ -15,7 +14,6 @@ on:
         type: boolean
 
 env:
-  # Zmienne środowiskowe z GitHub Secrets
   NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
 
 jobs:
@@ -36,12 +34,13 @@ jobs:
     - name: 📦 Install dependencies
       run: |
         pip install --upgrade pip
-        pip install -r requirements.txt
+        # Install only the dependencies needed for the scheduler (no Streamlit)
+        pip install psycopg2-binary pyyaml pytz
     
     - name: 🚀 Run scheduler
       run: |
-        echo "🤖 Uruchamianie schedulera gierek..."
-        python github_scheduler.py 2>&1 | sed 's/neon\.tech[^[:space:]]*/[MASKED_URL]/g; s/postgresql:\/\/[^[:space:]]*/[MASKED_CONNECTION]/g'
+        echo "🤖 Run games scheduler..."
+        python github_scheduler.py
       env:
         FORCE_RUN: ${{ github.event.inputs.force_run }}
     
