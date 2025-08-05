@@ -7,7 +7,7 @@ from datetime import datetime
 from src.database import NeonDB
 from src.config import TIMEZONE
 from src.utils.game_utils import get_active_games
-from src.utils.signup_utils import add_signup, remove_signup, get_signups_for_game
+from src.utils.signup_utils import add_signup, remove_signup
 from src.utils.datetime_utils import parse_game_time
 from src.utils.security import (
     RateLimiter, 
@@ -172,18 +172,3 @@ def signup_page(db: NeonDB):
                     st.session_state.signup_message_type = 'error'
                     log_security_event("failed_signout", f"nickname: {nickname_out}, error: {message[:50]}...")
                     st.rerun()
-
-    # Display current signups
-    st.divider()
-    st.subheader("📋 Aktualnie zapisani")
-    
-    signups = get_signups_for_game(db, selected_game['id'])
-    if signups:
-        cols = st.columns(min(4, max(1, len(signups) // 5 + 1)))  # Dynamic columns
-        for i, signup in enumerate(signups):
-            with cols[i % len(cols)]:
-                st.write(f"**{i+1}.** {signup['nickname']}")
-        
-        st.info(f"**Łącznie zapisanych:** {len(signups)} osób")
-    else:
-        st.info("Brak zapisów na tę gierkę. Bądź pierwszy! 🚀")
