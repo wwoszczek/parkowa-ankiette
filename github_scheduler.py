@@ -283,11 +283,11 @@ def main():
         # Dezaktywuj przeszłe gierki
         deactivated = deactivate_past_games(connection)
         
-        # Aktywuj gierki dla których już czas na zapisy
-        activated = activate_games_for_signup(connection)
-        
         # Utwórz nowe gierki
         created = create_upcoming_games(connection)
+        
+        # Aktywuj gierki dla których już czas na zapisy (po utworzeniu nowych)
+        activated = activate_games_for_signup(connection)
         
         # Finalne statystyki
         final_stats = get_scheduler_stats(connection)
