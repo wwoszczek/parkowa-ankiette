@@ -16,7 +16,7 @@ signup:
 # ===== LOSOWANIE SKŁADÓW =====
 draw:
   day: 2  # środa
-  hour: 15
+  hour: 8
   minute: 0
 
 # ===== SKŁADY DRUŻYN =====
