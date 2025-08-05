@@ -82,7 +82,6 @@ def draw_page(db: NeonDB):
                 
                 if save_teams(db, game['id'], teams):
                     st.success("Składy wylosowane pomyślnie!")
-                    st.rerun()
         else:
             st.error(MANUAL_DRAW_MESSAGE)
         

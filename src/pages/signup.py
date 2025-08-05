@@ -47,21 +47,6 @@ def signup_page(db: NeonDB):
     """Signup page"""
     st.header("⚽ Zapisy na gierkę")
     
-    # Initialize message state
-    if 'signup_message' not in st.session_state:
-        st.session_state.signup_message = None
-        st.session_state.signup_message_type = None
-    
-    # Display persistent message if exists
-    if st.session_state.signup_message:
-        if st.session_state.signup_message_type == 'success':
-            st.success(st.session_state.signup_message)
-        elif st.session_state.signup_message_type == 'error':
-            st.error(st.session_state.signup_message)
-        # Clear message after displaying
-        st.session_state.signup_message = None
-        st.session_state.signup_message_type = None
-    
     # Get active games
     active_games = get_active_games(db)
     
@@ -105,31 +90,27 @@ def signup_page(db: NeonDB):
                 if not nickname_valid:
                     st.error(f"❌ Błąd nickname: {nickname_error}")
                     log_security_event("invalid_nickname", f"nickname: {nickname[:10]}...")
-                    return
+                    st.stop()
                 
                 # Password validation
                 password_valid, password_error = validate_password(password)
                 if not password_valid:
                     st.error(f"❌ Błąd hasła: {password_error}")
                     log_security_event("invalid_password", "password validation failed")
-                    return
+                    st.stop()
                 
                 # Signup attempt
                 with st.spinner("Zapisuję..."):
                     success, message = add_signup(db, selected_game['id'], nickname, password)
                     
                 if success:
-                    st.session_state.signup_message = f"✅ {message}"
-                    st.session_state.signup_message_type = 'success'
+                    st.success(f"✅ {message}")
                     log_security_event("successful_signup", f"nickname: {nickname}")
                     # Clear cache to ensure fresh data
                     clear_signup_cache()
-                    st.rerun()
                 else:
-                    st.session_state.signup_message = f"❌ {message}"
-                    st.session_state.signup_message_type = 'error'
+                    st.error(f"❌ {message}")
                     log_security_event("failed_signup", f"nickname: {nickname}, error: {message[:50]}...")
-                    st.rerun()
     
     with col2:
         st.subheader("Wypisz się")
@@ -154,21 +135,17 @@ def signup_page(db: NeonDB):
                 # Basic validation
                 if not nickname_out or not password_out:
                     st.error("❌ Podaj nickname i hasło")
-                    return
+                    st.stop()
                 
                 # Signout attempt
                 with st.spinner("Wypisuję..."):
                     success, message = remove_signup(db, selected_game['id'], nickname_out, password_out)
                     
                 if success:
-                    st.session_state.signup_message = f"✅ {message}"
-                    st.session_state.signup_message_type = 'success'
+                    st.success(f"✅ {message}")
                     log_security_event("successful_signout", f"nickname: {nickname_out}")
                     # Clear cache to ensure fresh data
                     clear_signup_cache()
-                    st.rerun()
                 else:
-                    st.session_state.signup_message = f"❌ {message}"
-                    st.session_state.signup_message_type = 'error'
+                    st.error(f"❌ {message}")
                     log_security_event("failed_signout", f"nickname: {nickname_out}, error: {message[:50]}...")
-                    st.rerun()
