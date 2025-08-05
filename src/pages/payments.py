@@ -130,11 +130,14 @@ def payments_page(db: NeonDB):
     # Past games management
     st.subheader("🕒 Zarządzanie płatnościami w historycznych gierkach")
     
-    past_games = get_past_games(db, limit=10)
+    past_games = get_past_games(db)
     
     if not past_games:
         st.info("Brak zakończonych gierek do zarządzania płatnościami.")
         return
+    
+    # Limit to last 10 games for performance
+    past_games = past_games[:10]
     
     # Game selection
     game_options = {}
