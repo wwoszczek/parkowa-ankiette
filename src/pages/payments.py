@@ -41,7 +41,7 @@ def get_payment_status_for_game(db: NeonDB, game_id: str):
             ORDER BY nickname
         """
         result = db.execute_query(query, (game_id,))
-        return {row[0]: row[1] for row in result} if result else {}
+        return {row['nickname']: row['paid'] for row in result} if result else {}
     except Exception as e:
         st.error(f"Błąd pobierania statusu płatności: {e}")
         return {}
@@ -142,10 +142,10 @@ def payments_page(db: NeonDB):
     # Game selection
     game_options = {}
     for game in past_games:
-        game_time = parse_game_time(game[1])
+        game_time = parse_game_time(game['start_time'])
         game_time_local = game_time.astimezone(TIMEZONE)
         display_time = game_time_local.strftime('%d.%m.%Y %H:%M')
-        game_options[display_time] = game[0]
+        game_options[display_time] = game['id']
     
     selected_display = st.selectbox(
         "Wybierz gierkę:",
@@ -171,7 +171,7 @@ def payments_page(db: NeonDB):
                 st.write("**Zapłacił**")
             
             for signup in signups:
-                nickname = signup[2]  # nickname is at index 2
+                nickname = signup['nickname']  # Access nickname using dictionary key
                 current_paid = payment_status.get(nickname, False)
                 
                 col1, col2 = st.columns([3, 1])
