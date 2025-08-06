@@ -19,7 +19,7 @@ def main():
     # Page configuration
     setup_page_config()
     
-    st.title("⚽ Parkowa Ankieta - Cotygodniowe Gierki")
+    st.title("⚽ Parkowa - Cotygodniowe Gierki")
     
     # Next game information in header (cached)
     next_game_time = get_cached_next_game_time()
