@@ -47,6 +47,14 @@ def signup_page(db: NeonDB):
     """Signup page"""
     st.header("⚽ Zapisy na gierkę")
     
+    # Info about signup process
+    st.info("""
+    ℹ️ **Jak działają zapisy:**
+    • Zapisy otwierają się w każdą niedzielę o 10:00
+    • Hasło ustawione przy zapisie jest potrzebne tylko w razie wypisu
+    • Jest to mechanizm zabezpieczający przed niechcianymi i przypadkowymi wypisami
+    """)
+    
     # Get active games
     active_games = get_active_games(db)
     

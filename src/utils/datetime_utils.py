@@ -17,7 +17,8 @@ def get_next_game_time():
     days_ahead = GAME_DAY - now.weekday()
     
     # If today is game day but after start time, take next week
-    if days_ahead <= 0 or (days_ahead == 0 and now.hour >= GAME_START_HOUR):
+    if days_ahead < 0 or (days_ahead == 0 and (now.hour > GAME_START_HOUR or 
+                                               (now.hour == GAME_START_HOUR and now.minute >= GAME_START_MINUTE))):
         days_ahead += 7
     
     next_game = now + timedelta(days=days_ahead)
