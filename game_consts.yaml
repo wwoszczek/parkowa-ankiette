@@ -1,26 +1,25 @@
-# Konfiguracja czasowa gierek piłkarskich
-# Edytuj te wartości aby zmienić harmonogram
+# Time config for games
 
-# ===== HARMONOGRAM GIEREK =====
+# ===== GAMES SCHEDULE =====
 game:
-  day: 2  # dzień tygodnia (0=poniedziałek, 1=wtorek, ..., 6=niedziela)
+  day: 2  # day of the week (0=monday, 1=tuesday, ..., 6=sunday)
   hour: 18
   minute: 30
 
-# ===== OTWARCIE ZAPISÓW =====
+# ===== SIGNUP OPENING =====
 signup:
-  day: 6  # niedziela
+  day: 6  # sunday
   hour: 10
   minute: 0
 
-# ===== LOSOWANIE SKŁADÓW =====
+# ===== DRAW TEAMS =====
 draw:
-  day: 2  # środa
+  day: 2  # wednesday
   hour: 8
   minute: 0
 
-# ===== SKŁADY DRUŻYN =====
-# Konfiguracja automatycznego losowania dla różnych liczb graczy
+# ===== TEAMS CONFIGURATION =====
+# Configuration for automatic team drawing for different player counts
 teams:
   12:
     count: 2
@@ -37,13 +36,13 @@ teams:
     colors: ["biała", "czerwona", "czarna"]
     players_per_team: [6, 6, 6]
 
-# ===== KOMUNIKATY =====
+# ===== MESSAGES =====
 messages:
   manual_draw: "**LOSOWANIE MUSI ODBYĆ SIĘ RĘCZNIE, NIETYPOWA LICZBA UCZESTNIKÓW**"
 
-# ===== ROZLICZENIA =====
+# ===== PAYMENTS =====
 payments:
   blik_number: "+48724229355"
   
-# Nazwy dni tygodnia (do generowania komunikatów)
+# DAY NAMES
 day_names: ["poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota", "niedziela"]

@@ -81,11 +81,11 @@ def parse_game_time(start_time):
 
 def get_signup_opening_time(game_time):
     """Calculate when signups open for a given game"""
-    # Zapisy otwierają się w określony dzień tygodnia przed gierką
+    # Signups open on a specific day of the week before the game
     days_to_signup = game_time.weekday() - SIGNUP_OPEN_DAY
     
-    # Jeśli dzień zapisów jest później w tygodniu niż gierka, 
-    # albo to ten sam dzień ale po godzinie, bierz poprzedni tydzień
+    # If the signup day is later in the week than the game,
+    # or it's the same day but after the hour, take the previous week
     if days_to_signup <= 0:
         days_to_signup += 7
     
@@ -99,7 +99,7 @@ def activate_games_for_signup(connection) -> int:
     now = datetime.now(TIMEZONE)
     
     try:
-        # Pobierz nieaktywne gierki
+        # Get inactive games
         inactive_games = execute_query(connection, "SELECT * FROM games WHERE active = FALSE")
         
         activated_count = 0
@@ -107,7 +107,7 @@ def activate_games_for_signup(connection) -> int:
             game_time = parse_game_time(game['start_time'])
             signup_open_time = get_signup_opening_time(game_time)
             
-            # Aktywuj jeśli zapisy już powinny być otwarte
+            # Activate if signups should already be open
             if now >= signup_open_time:
                 execute_query(
                     connection, 
@@ -154,14 +154,14 @@ def deactivate_past_games(connection) -> int:
     now = datetime.now(TIMEZONE)
     
     try:
-        # Pobierz aktywne gierki
+        # Get active games
         active_games = execute_query(connection, "SELECT * FROM games WHERE active = TRUE")
         
         deactivated_count = 0
         for game in active_games:
             game_time = parse_game_time(game['start_time'])
             
-            # Dezaktywuj jeśli gierka już się odbyła
+            # Deactivate if the game has already taken place
             if game_time <= now:
                 execute_query(
                     connection, 
@@ -207,7 +207,7 @@ def create_game_for_week(connection, weeks_ahead: int) -> bool:
     try:
         game_time = get_next_game_time() + timedelta(weeks=weeks_ahead)
         
-        # Sprawdź czy gierka już istnieje
+        # Check if a game already exists
         existing_games = execute_query(connection, "SELECT * FROM games")
         
         for game in existing_games:
@@ -215,7 +215,7 @@ def create_game_for_week(connection, weeks_ahead: int) -> bool:
             if existing_time.date() == game_time.date():
                 return False
         
-        # Utwórz nową gierkę (nieaktywną do momentu otwarcia zapisów)
+        # Create a new game (inactive until signup opening)
         new_game_id = str(uuid.uuid4())
         execute_query(
             connection,
@@ -234,10 +234,10 @@ def create_game_for_week(connection, weeks_ahead: int) -> bool:
 def get_scheduler_stats(connection) -> dict:
     """Get current scheduler statistics"""
     try:
-        # Aktywne gierki
+        # Active games
         active_games = execute_query(connection, "SELECT * FROM games WHERE active = TRUE")
         
-        # Statystyki zapisów
+        # Signup statistics
         total_signups = 0
         for game in active_games:
             signups = execute_query(
@@ -247,7 +247,7 @@ def get_scheduler_stats(connection) -> dict:
             )
             total_signups += signups[0]['count'] if signups else 0
         
-        # Wszystkie gierki
+        # All games
         all_games = execute_query(connection, "SELECT COUNT(*) as count FROM games")
         total_games_count = all_games[0]['count'] if all_games else 0
         
@@ -273,26 +273,26 @@ def main():
     logger.info("=" * 50)
     
     try:
-        # Połączenie z bazą danych
+        # Database connection
         connection = get_database_connection()
         
-        # Początkowe statystyki
+        # Initial statistics
         initial_stats = get_scheduler_stats(connection)
         logger.info(f"📊 Stan początkowy: {initial_stats['active_games_count']} aktywnych gierek, {initial_stats['total_signups']} zapisów")
         
-        # Dezaktywuj przeszłe gierki
+        # Deactivate past games
         deactivated = deactivate_past_games(connection)
         
-        # Utwórz nowe gierki
+        # Create new games
         created = create_upcoming_games(connection)
         
-        # Aktywuj gierki dla których już czas na zapisy (po utworzeniu nowych)
+        # Activate games for which it's time for signups (after creating new ones)
         activated = activate_games_for_signup(connection)
         
-        # Finalne statystyki
+        # Final statistics
         final_stats = get_scheduler_stats(connection)
         
-        # Podsumowanie
+        # Summary
         logger.info("=" * 50)
         logger.info("📈 PODSUMOWANIE:")
         logger.info(f"   🔴 Dezaktywowano: {deactivated} gierek")

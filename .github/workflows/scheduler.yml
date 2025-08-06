@@ -58,4 +58,4 @@ jobs:
       if: failure()
       run: |
         echo "❌ Scheduler failed at $(date)"
-        # Tutaj można dodać notyfikację na Slack/Discord/email
+        # Here you can add notifications to Slack/Discord/email
