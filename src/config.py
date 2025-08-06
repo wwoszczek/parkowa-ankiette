@@ -21,7 +21,7 @@ def init_database():
 def setup_page_config():
     """Configure Streamlit page settings"""
     st.set_page_config(
-        page_title="Parkowa Ankieta - Gierki Piłkarskie",
+        page_title="Parkowa - Gierki Piłkarskie",
         page_icon="⚽",
         layout="wide"
     )
