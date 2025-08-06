@@ -50,8 +50,8 @@ def signup_page(db: NeonDB):
     # Info about signup process
     st.info("""
     ℹ️ **Jak działają zapisy:**\n
-    • Zapisy otwierają się w każdą niedzielę o 10:00\n
-    • Hasło ustawione przy zapisie jest potrzebne tylko w razie wypisu\n
+    • Zapisy otwierają się w każdą niedzielę o 10:00<br>
+    • Hasło ustawione przy zapisie jest potrzebne tylko w razie wypisu<br>
     • Jest to mechanizm zabezpieczający przed niechcianymi i przypadkowymi wypisami
     """)
     
