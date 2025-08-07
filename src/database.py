@@ -51,16 +51,23 @@ class NeonDB:
                 application_name='parkowa-ankiette-v2'
             )
             
-            # Set timeout parameters after connection is established
+                        # Set timeout parameters after connection is established
+            timeout_settings = [
+                ("statement_timeout", "60s"),
+                ("idle_in_transaction_session_timeout", "30s"), 
+                ("lock_timeout", "15s"),
+                ("idle_session_timeout", "15s")
+            ]
+            
             with conn.cursor() as cur:
-                cur.execute("SET statement_timeout = '60s'")
-                cur.execute("SET idle_in_transaction_session_timeout = '30s'")
-                cur.execute("SET lock_timeout = '15s'")
-                # Note: idle_session_timeout and tcp_user_timeout might not be available in all PostgreSQL versions
-                try:
-                    cur.execute("SET idle_session_timeout = '15s'")
-                except:
-                    pass  # Ignore if not supported
+                for setting_name, value in timeout_settings:
+                    try:
+                        cur.execute(f"SET {setting_name} = '{value}'")
+                    except Exception:
+                        # Silently ignore unsupported parameters to avoid slowdown
+                        pass
+            
+            conn.commit()
             
             conn.commit()
             return conn
