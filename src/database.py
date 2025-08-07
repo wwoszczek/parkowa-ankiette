@@ -35,21 +35,36 @@ class NeonDB:
     def get_connection(self):
         """Get database connection with very aggressive timeouts to prevent idle connections"""
         try:
-            return psycopg2.connect(
-                self.connection_string,
+            # Check if we should use pooled or unpooled connection
+            connection_string = self.connection_string
+            
+            # If using pooler, modify to use unpooled connection for timeout settings
+            if 'pooler.gwc.azure.neon.tech' in connection_string:
+                # Replace pooler with direct connection to avoid startup parameter issues
+                connection_string = connection_string.replace('-pooler.gwc.azure.neon.tech', '.gwc.azure.neon.tech')
+            
+            conn = psycopg2.connect(
+                connection_string,
                 cursor_factory=RealDictCursor,
                 sslmode='require',
-                # VERY AGGRESSIVE timeouts - kill everything quickly
                 connect_timeout=10,
-                application_name='parkowa-ankiette-v2',
-                options=' '.join([
-                    '-c statement_timeout=60s',     # Kill queries after 60s
-                    '-c idle_in_transaction_session_timeout=30s',  # Kill idle transactions after 30s  
-                    '-c idle_session_timeout=15s',  # Kill ANY idle session after 15s
-                    '-c lock_timeout=15s',           # Kill locks after 15s
-                    '-c tcp_user_timeout=10000'     # TCP timeout 10s
-                ])
+                application_name='parkowa-ankiette-v2'
             )
+            
+            # Set timeout parameters after connection is established
+            with conn.cursor() as cur:
+                cur.execute("SET statement_timeout = '60s'")
+                cur.execute("SET idle_in_transaction_session_timeout = '30s'")
+                cur.execute("SET lock_timeout = '15s'")
+                # Note: idle_session_timeout and tcp_user_timeout might not be available in all PostgreSQL versions
+                try:
+                    cur.execute("SET idle_session_timeout = '15s'")
+                except:
+                    pass  # Ignore if not supported
+            
+            conn.commit()
+            return conn
+            
         except Exception as e:
             st.error(f"Błąd połączenia z bazą danych: {e}")
             raise e
