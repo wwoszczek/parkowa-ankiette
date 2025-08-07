@@ -33,7 +33,7 @@ class NeonDB:
             raise e
     
     def get_connection(self):
-        """Get database connection with very aggressive timeouts to prevent idle connections"""
+        """Get database connection optimized for speed"""
         try:
             # Check if we should use pooled or unpooled connection
             connection_string = self.connection_string
@@ -47,27 +47,25 @@ class NeonDB:
                 connection_string,
                 cursor_factory=RealDictCursor,
                 sslmode='require',
-                connect_timeout=10,
+                connect_timeout=5,  # Reduced from 10s
                 application_name='parkowa-ankiette-v2'
             )
             
-                        # Set timeout parameters after connection is established
-            timeout_settings = [
-                ("statement_timeout", "60s"),
-                ("idle_in_transaction_session_timeout", "30s"), 
-                ("lock_timeout", "15s"),
-                ("idle_session_timeout", "15s")
-            ]
-            
+            # Set only essential timeouts in one go for speed
             with conn.cursor() as cur:
-                for setting_name, value in timeout_settings:
+                try:
+                    # Batch SET commands for better performance
+                    cur.execute("""
+                        SET statement_timeout = '60s';
+                        SET idle_in_transaction_session_timeout = '30s';
+                        SET lock_timeout = '15s';
+                    """)
+                except Exception:
+                    # If batch fails, fall back to essential timeout only
                     try:
-                        cur.execute(f"SET {setting_name} = '{value}'")
-                    except Exception:
-                        # Silently ignore unsupported parameters to avoid slowdown
-                        pass
-            
-            conn.commit()
+                        cur.execute("SET statement_timeout = '60s'")
+                    except:
+                        pass  # Even this might fail in some environments
             
             conn.commit()
             return conn
