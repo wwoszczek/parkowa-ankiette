@@ -73,7 +73,7 @@ def get_debtors_summary(db: NeonDB):
             AND g.start_time < CURRENT_TIMESTAMP
             AND g.active = FALSE
             GROUP BY s.nickname
-            ORDER BY unpaid_games DESC, s.nickname
+            ORDER BY unpaid_games DESC
         """
         result = db.execute_query(query)
         return result if result else []
@@ -113,7 +113,7 @@ def payments_page(db: NeonDB):
         st.rerun()
     
     # Add payment column if needed
-    add_payment_column_if_not_exists(db)
+    # add_payment_column_if_not_exists(db)
     
     # Debtors summary
     st.subheader("📊 Szybki podgląd dłużników")
@@ -181,7 +181,7 @@ def payments_page(db: NeonDB):
                 
                 with col2:
                     new_paid = st.checkbox(
-                        f"Płatność dla {nickname}",
+                        f"Płatność dla {nickname}" if nickname else "Płatność",
                         value=current_paid,
                         key=f"paid_{selected_game_id}_{nickname}",
                         label_visibility="hidden"
