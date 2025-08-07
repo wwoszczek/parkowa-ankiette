@@ -33,43 +33,13 @@ class NeonDB:
             raise e
     
     def get_connection(self):
-        """Get database connection optimized for speed"""
+        """Get simple, fast database connection"""
         try:
-            # Check if we should use pooled or unpooled connection
-            connection_string = self.connection_string
-            
-            # If using pooler, modify to use unpooled connection for timeout settings
-            if 'pooler.gwc.azure.neon.tech' in connection_string:
-                # Replace pooler with direct connection to avoid startup parameter issues
-                connection_string = connection_string.replace('-pooler.gwc.azure.neon.tech', '.gwc.azure.neon.tech')
-            
-            conn = psycopg2.connect(
-                connection_string,
+            return psycopg2.connect(
+                self.connection_string,
                 cursor_factory=RealDictCursor,
-                sslmode='require',
-                connect_timeout=5,  # Reduced from 10s
-                application_name='parkowa-ankiette-v2'
+                sslmode='require'
             )
-            
-            # Set only essential timeouts in one go for speed
-            with conn.cursor() as cur:
-                try:
-                    # Batch SET commands for better performance
-                    cur.execute("""
-                        SET statement_timeout = '60s';
-                        SET idle_in_transaction_session_timeout = '30s';
-                        SET lock_timeout = '15s';
-                    """)
-                except Exception:
-                    # If batch fails, fall back to essential timeout only
-                    try:
-                        cur.execute("SET statement_timeout = '60s'")
-                    except:
-                        pass  # Even this might fail in some environments
-            
-            conn.commit()
-            return conn
-            
         except Exception as e:
             st.error(f"Błąd połączenia z bazą danych: {e}")
             raise e

@@ -25,8 +25,8 @@ def main():
     if 'last_cleanup' not in st.session_state:
         st.session_state.last_cleanup = time.time()
     
-    # Cleanup connections every 10 minutes to kill idle connections
-    if time.time() - st.session_state.last_cleanup > 600:  # 10 minutes
+    # Cleanup connections every 100 minutes to kill idle connections
+    if time.time() - st.session_state.last_cleanup > 6000:
         cleanup_connections()
         st.session_state.last_cleanup = time.time()
     
