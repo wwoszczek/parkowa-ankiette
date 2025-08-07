@@ -107,8 +107,8 @@ def activate_games_for_signup(connection) -> int:
             game_time = parse_game_time(game['start_time'])
             signup_open_time = get_signup_opening_time(game_time)
             
-            # Activate if signups should already be open
-            if now >= signup_open_time:
+            # Activate if signups should already be open AND the game hasn't happened yet
+            if now >= signup_open_time and game_time > now:
                 execute_query(
                     connection, 
                     "UPDATE games SET active = TRUE WHERE id = %s",
@@ -116,6 +116,8 @@ def activate_games_for_signup(connection) -> int:
                 )
                 logger.info(f"🟢 Aktywowano gierkę z {game_time.strftime('%d.%m.%Y %H:%M')} (zapisy otwarte od {signup_open_time.strftime('%d.%m.%Y %H:%M')})")
                 activated_count += 1
+            elif now >= signup_open_time and game_time <= now:
+                logger.info(f"⏭️  Pominięto aktywację gierki z {game_time.strftime('%d.%m.%Y %H:%M')} - gierka już się odbyła")
         
         if activated_count == 0:
             logger.info("✅ Brak gierek do aktywacji")
