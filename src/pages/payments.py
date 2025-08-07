@@ -120,7 +120,7 @@ def payments_page(db: NeonDB):
     debtors = get_debtors_summary(db)
     
     if debtors:
-        df_debtors = pd.DataFrame(debtors, columns=["Gracz", "Niezapłacone gierki"])
+        df_debtors = pd.DataFrame(debtors)
         st.dataframe(df_debtors, use_container_width=True, hide_index=True)
     else:
         st.success("🎉 Wszyscy gracze mają uregulowane płatności!")
