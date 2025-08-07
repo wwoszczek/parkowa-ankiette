@@ -181,9 +181,10 @@ def payments_page(db: NeonDB):
                 
                 with col2:
                     new_paid = st.checkbox(
-                        "",
+                        f"Płatność dla {nickname}",
                         value=current_paid,
-                        key=f"paid_{selected_game_id}_{nickname}"
+                        key=f"paid_{selected_game_id}_{nickname}",
+                        label_visibility="hidden"
                     )
                     
                     # Update if changed
