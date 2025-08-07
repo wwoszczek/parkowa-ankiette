@@ -33,50 +33,103 @@ class NeonDB:
             raise e
     
     def get_connection(self):
-        """Get database connection with error handling"""
+        """Get database connection with very aggressive timeouts to prevent idle connections"""
         try:
             return psycopg2.connect(
                 self.connection_string,
                 cursor_factory=RealDictCursor,
-                sslmode='require'
+                sslmode='require',
+                # VERY AGGRESSIVE timeouts - kill everything quickly
+                connect_timeout=10,
+                application_name='parkowa-ankiette-v2',
+                options=' '.join([
+                    '-c statement_timeout=60s',     # Kill queries after 60s
+                    '-c idle_in_transaction_session_timeout=30s',  # Kill idle transactions after 30s  
+                    '-c idle_session_timeout=15s',  # Kill ANY idle session after 15s
+                    '-c lock_timeout=15s',           # Kill locks after 15s
+                    '-c tcp_user_timeout=10000'     # TCP timeout 10s
+                ])
             )
         except Exception as e:
             st.error(f"Błąd połączenia z bazą danych: {e}")
             raise e
     
     def execute_query(self, query: str, params: Optional[tuple] = None) -> Optional[List[Dict[str, Any]]]:
-        """Execute query and return results"""
+        """Execute query and return results with explicit connection management"""
+        connection = None
         try:
-            with self.get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.execute(query, params)
-                    
-                    # For SELECT queries, return results
-                    if query.strip().lower().startswith('select'):
-                        return [dict(row) for row in cur.fetchall()]
-                    
-                    # For other queries, commit and return affected rows
-                    conn.commit()
-                    return cur.rowcount
+            connection = self.get_connection()
+            # Set autocommit to avoid hanging transactions
+            connection.autocommit = True
+            
+            with connection.cursor() as cur:
+                cur.execute(query, params)
+                
+                # For SELECT queries, return results
+                if query.strip().lower().startswith('select'):
+                    results = [dict(row) for row in cur.fetchall()]
+                    return results
+                
+                # For other queries, return affected rows (autocommit handles commit)
+                return cur.rowcount
                     
         except Exception as e:
             st.error(f"Błąd wykonywania zapytania: {e}")
             raise e
+        finally:
+            # ALWAYS close connection explicitly
+            if connection and not connection.closed:
+                connection.close()
     
     def execute_many(self, query: str, params_list: List[tuple]) -> int:
-        """Execute query with multiple parameter sets"""
+        """Execute query with multiple parameter sets with explicit connection management"""
+        connection = None
         try:
-            with self.get_connection() as conn:
-                with conn.cursor() as cur:
-                    cur.executemany(query, params_list)
-                    conn.commit()
-                    return cur.rowcount
+            connection = self.get_connection()
+            connection.autocommit = True
+            
+            with connection.cursor() as cur:
+                cur.executemany(query, params_list)
+                return cur.rowcount
         except Exception as e:
             st.error(f"Błąd wykonywania zapytań wsadowych: {e}")
             raise e
+        finally:
+            # ALWAYS close connection explicitly
+            if connection and not connection.closed:
+                connection.close()
 
 # Global database instance
 @st.cache_resource
 def get_db() -> NeonDB:
     """Get cached database instance"""
     return NeonDB()
+
+
+def cleanup_connections():
+    """Force cleanup of any hanging database connections and kill idle sessions"""
+    try:
+        # Clear Streamlit cache to force new DB instance
+        get_db.clear()
+        
+        # Try to kill any remaining idle sessions directly in DB
+        try:
+            temp_db = NeonDB()
+            temp_db.execute_query("""
+                SELECT pg_terminate_backend(pid)
+                FROM pg_stat_activity
+                WHERE datname = current_database()
+                AND state = 'idle'
+                AND pid != pg_backend_pid()
+            """)
+        except:
+            pass  # Ignore errors, this is cleanup
+        
+        # Force garbage collection
+        import gc
+        gc.collect()
+        
+        return True
+    except Exception as e:
+        st.error(f"Błąd czyszczenia połączeń: {e}")
+        return False
