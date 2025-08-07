@@ -49,8 +49,6 @@ class NeonDB:
         connection = None
         try:
             connection = self.get_connection()
-            # Set autocommit to avoid hanging transactions
-            connection.autocommit = True
             
             with connection.cursor() as cur:
                 cur.execute(query, params)
@@ -60,7 +58,8 @@ class NeonDB:
                     results = [dict(row) for row in cur.fetchall()]
                     return results
                 
-                # For other queries, return affected rows (autocommit handles commit)
+                # For other queries, commit and return affected rows
+                connection.commit()
                 return cur.rowcount
                     
         except Exception as e:
@@ -76,10 +75,10 @@ class NeonDB:
         connection = None
         try:
             connection = self.get_connection()
-            connection.autocommit = True
             
             with connection.cursor() as cur:
                 cur.executemany(query, params_list)
+                connection.commit()
                 return cur.rowcount
         except Exception as e:
             st.error(f"Błąd wykonywania zapytań wsadowych: {e}")
@@ -94,32 +93,3 @@ class NeonDB:
 def get_db() -> NeonDB:
     """Get cached database instance"""
     return NeonDB()
-
-
-def cleanup_connections():
-    """Force cleanup of any hanging database connections and kill idle sessions"""
-    try:
-        # Clear Streamlit cache to force new DB instance
-        get_db.clear()
-        
-        # Try to kill any remaining idle sessions directly in DB
-        try:
-            temp_db = NeonDB()
-            temp_db.execute_query("""
-                SELECT pg_terminate_backend(pid)
-                FROM pg_stat_activity
-                WHERE datname = current_database()
-                AND state = 'idle'
-                AND pid != pg_backend_pid()
-            """)
-        except:
-            pass  # Ignore errors, this is cleanup
-        
-        # Force garbage collection
-        import gc
-        gc.collect()
-        
-        return True
-    except Exception as e:
-        st.error(f"Błąd czyszczenia połączeń: {e}")
-        return False

@@ -1,13 +1,11 @@
 import streamlit as st
 from src.config import setup_page_config, init_database
-from src.database import cleanup_connections
 from src.utils.datetime_utils import get_next_game_time
 from src.pages.signup import signup_page
 from src.pages.list_players import list_page
 from src.pages.draw_teams import draw_page
 from src.pages.history import history_page
 from src.pages.payments import payments_page
-import time
 
 
 @st.cache_data(ttl=300)  # Cache for 5 minutes
@@ -20,15 +18,6 @@ def main():
     """Main application function"""
     # Page configuration
     setup_page_config()
-    
-    # More frequent connection cleanup to prevent idle connections
-    if 'last_cleanup' not in st.session_state:
-        st.session_state.last_cleanup = time.time()
-    
-    # Cleanup connections every 100 minutes to kill idle connections
-    if time.time() - st.session_state.last_cleanup > 6000:
-        cleanup_connections()
-        st.session_state.last_cleanup = time.time()
     
     st.title("⚽ Parkowa - Cotygodniowe Gierki")
     
