@@ -47,18 +47,29 @@ def get_payment_status_for_game(db: NeonDB, game_id: str):
         return {}
 
 
-def update_payment_status(db: NeonDB, game_id: str, nickname: str, paid: bool):
-    """Update payment status for a player"""
+def batch_update_payments(db: NeonDB, game_id: str, payment_updates: dict):
+    """Update payment status for multiple players in a single transaction"""
     try:
         query = """
             UPDATE signups 
             SET paid = %s 
             WHERE game_id = %s AND nickname = %s
         """
-        db.execute_query(query, (paid, game_id, nickname))
+        
+        # Prepare all updates
+        updates = []
+        for nickname, paid in payment_updates.items():
+            updates.append((paid, game_id, nickname))
+        
+        # Execute all updates
+        with db.connection.cursor() as cur:
+            cur.executemany(query, updates)
+            db.connection.commit()
+        
         return True
     except Exception as e:
-        st.error(f"Błąd aktualizacji statusu płatności: {e}")
+        st.error(f"Błąd aktualizacji płatności: {e}")
+        db.connection.rollback()
         return False
 
 
@@ -115,15 +126,20 @@ def payments_page(db: NeonDB):
     # Add payment column if needed
     # add_payment_column_if_not_exists(db)
     
-    # Debtors summary
-    st.subheader("📊 Szybki podgląd dłużników")
-    debtors = get_debtors_summary(db)
-    
-    if debtors:
-        df_debtors = pd.DataFrame(debtors)
-        st.dataframe(df_debtors, use_container_width=True, hide_index=True)
-    else:
-        st.success("🎉 Wszyscy gracze mają uregulowane płatności!")
+    # Debtors summary - on demand
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        st.subheader("📊 Podgląd dłużników")
+    with col2:
+        if st.button("🔍 Podgląd dłużników", key="show_debtors"):
+            with st.spinner("Ładowanie danych o dłużnikach..."):
+                debtors = get_debtors_summary(db)
+                
+                if debtors:
+                    df_debtors = pd.DataFrame(debtors)
+                    st.dataframe(df_debtors, use_container_width=True, hide_index=True)
+                else:
+                    st.success("🎉 Wszyscy gracze mają uregulowane płatności!")
     
     st.markdown("---")
     
@@ -170,8 +186,10 @@ def payments_page(db: NeonDB):
             with col2:
                 st.write("**Zapłacił**")
             
+            payment_changes = {}
+            
             for signup in signups:
-                nickname = signup['nickname']  # Access nickname using dictionary key
+                nickname = signup['nickname']
                 current_paid = payment_status.get(nickname, False)
                 
                 col1, col2 = st.columns([3, 1])
@@ -187,11 +205,24 @@ def payments_page(db: NeonDB):
                         label_visibility="hidden"
                     )
                     
-                    # Update if changed
+                    # Track changes
                     if new_paid != current_paid:
-                        if update_payment_status(db, selected_game_id, nickname, new_paid):
-                            st.success(f"Zaktualizowano status płatności dla {nickname}")
-                            payment_status[nickname] = new_paid
-                            st.rerun()
+                        payment_changes[nickname] = new_paid
+            
+            # Update button
+            if payment_changes:
+                st.markdown("---")
+                col1, col2, col3 = st.columns([1, 2, 1])
+                with col2:
+                    if st.button("💾 Aktualizuj płatności", type="primary", use_container_width=True):
+                        with st.spinner("Zapisywanie zmian..."):
+                            if batch_update_payments(db, selected_game_id, payment_changes):
+                                st.success(f"✅ Zaktualizowano płatności dla {len(payment_changes)} graczy")
+                                st.rerun()
+                            else:
+                                st.error("❌ Błąd podczas aktualizacji płatności")
+                
+                # Show pending changes
+                st.info(f"📝 Oczekuje {len(payment_changes)} zmian do zapisania")
         else:
             st.info("Brak zapisów dla wybranej gierki.")
