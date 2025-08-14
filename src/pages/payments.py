@@ -59,15 +59,17 @@ def batch_update_payments(db: NeonDB, game_id: str, payment_updates: dict):
         for nickname, paid in payment_updates.items():
             updates.append((paid, game_id, nickname))
         
-        # Execute all updates
-        with db.connection.cursor() as cur:
-            cur.executemany(query, updates)
-            db.connection.commit()
+        # Execute all updates using NeonDB's execute_many method
+        affected_rows = db.execute_many(query, updates)
         
-        return True
+        if affected_rows > 0:
+            return True
+        else:
+            st.warning("Nie zaktualizowano żadnych rekordów")
+            return False
+        
     except Exception as e:
         st.error(f"Błąd aktualizacji płatności: {e}")
-        db.connection.rollback()
         return False
 
 
@@ -183,7 +185,7 @@ def payments_page(db: NeonDB):
                     current_paid = payment_status.get(nickname, False)
                     
                     new_paid = st.checkbox(
-                        f"✅ {nickname}",
+                        f"{nickname}",
                         value=current_paid,
                         key=f"payment_{nickname}"
                     )
