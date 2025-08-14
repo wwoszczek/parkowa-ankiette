@@ -184,19 +184,19 @@ def deactivate_past_games(connection) -> int:
 
 
 def create_upcoming_games(connection) -> int:
-    """Create games for next 2 weeks"""
+    """Create games for next week"""
     logger.info("🏗️ Sprawdzanie czy potrzeba utworzyć nowe gierki...")
     
     created_count = 0
     
     try:
-        for weeks_ahead in range(2):
+        for weeks_ahead in range(1):
             if create_game_for_week(connection, weeks_ahead):
                 created_count += 1
         
         if created_count == 0:
-            logger.info("✅ Wszystkie gierki na kolejne 2 tygodnie już istnieją")
-        
+            logger.info("✅ Wszystkie gierki na kolejny 1 tydzień już istnieją")
+
         return created_count
         
     except Exception as e:
