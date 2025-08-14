@@ -117,8 +117,6 @@ def history_page(db: NeonDB):
             st.info("Brak gierek w historii.")
             return
         
-        st.info(f"Znaleziono {len(historical_games)} gierek historycznych")
-        
         # Display games with lazy loading
         for game in historical_games:
             game_time = parse_game_time(game['start_time'])
