@@ -50,14 +50,21 @@ ALLOWED_PLAYER_COUNTS = list(TEAM_CONFIGS.keys())
 MANUAL_DRAW_MESSAGE = _config['messages']['manual_draw']
 
 # ===== PAYMENTS =====
-# Treasurer password loaded from Streamlit secrets for security
+# Payment configuration loaded from Streamlit secrets for security
 import streamlit as st
 try:
     TREASURER_PASSWORD = st.secrets["treasurer_password"]
 except KeyError:
     TREASURER_PASSWORD = "default_password"  # Fallback for development
-    
-BLIK_NUMBER = _config['payments']['blik_number']
+
+try:
+    BLIK_NUMBER = st.secrets["blik_number"]
+except KeyError:
+    # Fallback to YAML config for backward compatibility
+    try:
+        BLIK_NUMBER = _config['payments']['blik_number']
+    except KeyError:
+        BLIK_NUMBER = "Not configured - check Streamlit secrets"  # Clear fallback message
 
 # Generating messages based on configuration
 _day_names = _config['day_names']

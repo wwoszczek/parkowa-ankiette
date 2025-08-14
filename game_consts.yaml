@@ -41,8 +41,8 @@ messages:
   manual_draw: "**LOSOWANIE MUSI ODBYĆ SIĘ RĘCZNIE, NIETYPOWA LICZBA UCZESTNIKÓW**"
 
 # ===== PAYMENTS =====
-payments:
-  blik_number: "+48724229355"
+# payments:
+#   blik_number: "123123123"  # Moved to Streamlit secrets for security
   
 # DAY NAMES
 day_names: ["poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota", "niedziela"]
