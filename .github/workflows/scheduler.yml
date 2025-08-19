@@ -44,41 +44,6 @@ jobs:
       env:
         FORCE_RUN: ${{ github.event.inputs.force_run }}
     
-    - name: 🌐 Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 'lts/*'
-    
-    - name: 📦 Install Puppeteer
-      run: |
-        npm init -y
-        npm install puppeteer
-    
-    - name: 🔄 Keep website alive
-      run: |
-        echo "🌐 Visiting website to keep it alive..."
-        node -e "
-        const puppeteer = require('puppeteer');
-        (async () => {
-          console.log('🚀 Launching browser...');
-          const browser = await puppeteer.launch({ headless: true });
-          const page = await browser.newPage();
-          
-          console.log('📖 Opening https://zapisy-parkowa.streamlit.app/');
-          await page.goto('https://zapisy-parkowa.streamlit.app/', { 
-            waitUntil: 'networkidle0',
-            timeout: 30000 
-          });
-          
-          console.log('⏰ Waiting 15 seconds...');
-          await page.waitForTimeout(15000);
-          
-          console.log('✅ Closing browser');
-          await browser.close();
-          console.log('🎉 Website visit completed successfully');
-        })();
-        "
-    
     - name: 📊 Upload logs as artifacts (on failure)
       if: failure()
       uses: actions/upload-artifact@v4
