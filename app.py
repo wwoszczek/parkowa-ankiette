@@ -5,7 +5,7 @@ from src.pages.signup import signup_page
 from src.pages.list_players import list_page
 from src.pages.draw_teams import draw_page
 from src.pages.history import history_page
-from src.pages.payments import payments_page
+# from src.pages.payments import payments_page
 
 
 @st.cache_data(ttl=300)  # Cache for 5 minutes
