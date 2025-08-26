@@ -32,7 +32,7 @@ def main():
         st.session_state.current_page = 'signup'
     
     # Navigation buttons
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         if st.button("📝 Zapisy", 
@@ -58,11 +58,11 @@ def main():
                     use_container_width=True):
             st.session_state.current_page = 'history'
     
-    with col5:
-        if st.button("💰 Rozliczenia", 
-                    key="nav_payments",
-                    use_container_width=True):
-            st.session_state.current_page = 'payments'
+    # with col5:
+    #     if st.button("💰 Rozliczenia", 
+    #                 key="nav_payments",
+    #                 use_container_width=True):
+    #         st.session_state.current_page = 'payments'
     
     st.markdown("---")
     
@@ -81,8 +81,8 @@ def main():
         draw_page(db)
     elif st.session_state.current_page == 'history':
         history_page(db)
-    elif st.session_state.current_page == 'payments':
-        payments_page(db)
+    # elif st.session_state.current_page == 'payments':
+    #     payments_page(db)
 
 
 if __name__ == "__main__":
