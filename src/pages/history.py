@@ -83,7 +83,7 @@ def load_game_details(db: SupabaseDB, game_id: str, game_time_str: str):
                     }
                     for i, signup in enumerate(signups)
                 ])
-                st.dataframe(df, use_container_width=True, hide_index=True)
+                st.dataframe(df, width='stretch', hide_index=True)
                 st.info(f"Łącznie: {len(signups)} osób")
             else:
                 st.info("Brak zapisów.")

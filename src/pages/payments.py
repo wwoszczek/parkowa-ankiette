@@ -195,7 +195,7 @@ def payments_page(db: SupabaseDB):
                         payment_updates[nickname] = new_paid
                 
                 # Submit button
-                submitted = st.form_submit_button("💾 Zapisz zmiany", type="primary", use_container_width=True)
+                submitted = st.form_submit_button("💾 Zapisz zmiany", type="primary", width='stretch')
                 
                 if submitted:
                     if payment_updates:
@@ -221,6 +221,6 @@ def payments_page(db: SupabaseDB):
             
             if debtors:
                 df_debtors = pd.DataFrame(debtors)
-                st.dataframe(df_debtors, use_container_width=True, hide_index=True)
+                st.dataframe(df_debtors, width='stretch', hide_index=True)
             else:
                 st.success("🎉 Wszyscy gracze mają uregulowane płatności!")

@@ -37,31 +37,31 @@ def main():
     with col1:
         if st.button("📝 Zapisy", 
                     key="nav_signup",
-                    use_container_width=True):
+                    width='stretch'):
             st.session_state.current_page = 'signup'
     
     with col2:
         if st.button("📋 Lista", 
                     key="nav_list",
-                    use_container_width=True):
+                    width='stretch'):
             st.session_state.current_page = 'list'
     
     with col3:
         if st.button("🎲 Losowanie", 
                     key="nav_draw",
-                    use_container_width=True):
+                    width='stretch'):
             st.session_state.current_page = 'draw'
     
     with col4:
         if st.button("📚 Historia", 
                     key="nav_history",
-                    use_container_width=True):
+                    width='stretch'):
             st.session_state.current_page = 'history'
     
     # with col5:
     #     if st.button("💰 Rozliczenia", 
     #                 key="nav_payments",
-    #                 use_container_width=True):
+    #                 width='stretch'):
     #         st.session_state.current_page = 'payments'
     
     st.markdown("---")

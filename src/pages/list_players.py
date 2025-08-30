@@ -38,7 +38,7 @@ def list_page(db: SupabaseDB):
                 }
                 for i, signup in enumerate(signups)
             ])
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.dataframe(df, width='stretch', hide_index=True)
             st.info(f"Łącznie zapisanych: {len(signups)} osób")
         else:
             st.info("Brak zapisów na tę gierkę.")
