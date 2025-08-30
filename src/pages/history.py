@@ -5,7 +5,7 @@ Game history page
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from src.database import NeonDB
+from src.database import SupabaseDB
 from src.constants import TIMEZONE
 from src.utils.game_utils import get_past_games
 from src.utils.signup_utils import get_signups_for_game
@@ -49,7 +49,7 @@ def display_history_teams(teams_dict: dict):
                 st.write(f"• {player}")
 
 
-def get_historical_games(db: NeonDB):
+def get_historical_games(db: SupabaseDB):
     """Get only inactive games that have already taken place"""
     try:
         now = datetime.now(TIMEZONE)
@@ -66,7 +66,7 @@ def get_historical_games(db: NeonDB):
         return []
 
 
-def load_game_details(db: NeonDB, game_id: str, game_time_str: str):
+def load_game_details(db: SupabaseDB, game_id: str, game_time_str: str):
     """Load detailed information for a specific game"""
     try:
         with st.spinner(f"Ładowanie szczegółów gierki z {game_time_str}..."):
@@ -105,7 +105,7 @@ def load_game_details(db: NeonDB, game_id: str, game_time_str: str):
         st.error(f"Błąd podczas ładowania szczegółów gierki: {e}")
 
 
-def history_page(db: NeonDB):
+def history_page(db: SupabaseDB):
     """History page with lazy loading"""
     st.header("📚 Historia gierek")
     

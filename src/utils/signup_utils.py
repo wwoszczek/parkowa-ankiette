@@ -5,13 +5,13 @@ Functions for handling player signups
 import streamlit as st
 import uuid
 from datetime import datetime
-from src.database import NeonDB
+from src.database import SupabaseDB
 from src.constants import TIMEZONE
 from src.utils.auth import hash_password, verify_password
 from src.utils.security import sanitize_input, log_security_event
 
 
-def get_signups_for_game(db: NeonDB, game_id: str):
+def get_signups_for_game(db: SupabaseDB, game_id: str):
     """Gets signups for a given game"""
     try:
         return db.execute_query(
@@ -23,7 +23,7 @@ def get_signups_for_game(db: NeonDB, game_id: str):
         return []
 
 
-def add_signup(db: NeonDB, game_id: str, nickname: str, password: str):
+def add_signup(db: SupabaseDB, game_id: str, nickname: str, password: str):
     """Adds player signup"""
     try:
         # Data sanitization
@@ -54,7 +54,7 @@ def add_signup(db: NeonDB, game_id: str, nickname: str, password: str):
         return False, f"Błąd podczas zapisu: {safe_error}"
 
 
-def remove_signup(db: NeonDB, game_id: str, nickname: str, password: str):
+def remove_signup(db: SupabaseDB, game_id: str, nickname: str, password: str):
     """Removes player signup"""
     try:
         # Data sanitization

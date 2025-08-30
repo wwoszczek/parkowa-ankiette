@@ -4,14 +4,14 @@ Payments management page for treasurer
 
 import streamlit as st
 import pandas as pd
-from src.database import NeonDB
+from src.database import SupabaseDB
 from src.constants import TIMEZONE
 from src.game_config import TREASURER_PASSWORD, BLIK_NUMBER
 from src.utils.signup_utils import get_signups_for_game
 from src.utils.datetime_utils import parse_game_time
 
 
-def add_payment_column_if_not_exists(db: NeonDB):
+def add_payment_column_if_not_exists(db: SupabaseDB):
     """Add paid column to signups table if it doesn't exist"""
     try:
         # Check if column exists
@@ -29,7 +29,7 @@ def add_payment_column_if_not_exists(db: NeonDB):
         st.error(f"Błąd przy dodawaniu kolumny płatności: {e}")
 
 
-def get_payment_status_for_game(db: NeonDB, game_id: str):
+def get_payment_status_for_game(db: SupabaseDB, game_id: str):
     """Get payment status for all players in a game"""
     try:
         query = """
@@ -45,7 +45,7 @@ def get_payment_status_for_game(db: NeonDB, game_id: str):
         return {}
 
 
-def batch_update_payments(db: NeonDB, game_id: str, payment_updates: dict):
+def batch_update_payments(db: SupabaseDB, game_id: str, payment_updates: dict):
     """Update payment status for multiple players in a single transaction"""
     try:
         query = """
@@ -59,7 +59,7 @@ def batch_update_payments(db: NeonDB, game_id: str, payment_updates: dict):
         for nickname, paid in payment_updates.items():
             updates.append((paid, game_id, nickname))
         
-        # Execute all updates using NeonDB's execute_many method
+        # Execute all updates using SupabaseDB's execute_many method
         affected_rows = db.execute_many(query, updates)
         
         if affected_rows > 0:
@@ -73,7 +73,7 @@ def batch_update_payments(db: NeonDB, game_id: str, payment_updates: dict):
         return False
 
 
-def get_past_inactive_games(db: NeonDB):
+def get_past_inactive_games(db: SupabaseDB):
     """Get inactive games that already ended (start_time < now)"""
     try:
         query = """
@@ -90,7 +90,7 @@ def get_past_inactive_games(db: NeonDB):
         return []
 
 
-def get_debtors_summary(db: NeonDB):
+def get_debtors_summary(db: SupabaseDB):
     """Get summary of players who haven't paid for past games"""
     try:
         query = """
@@ -110,7 +110,7 @@ def get_debtors_summary(db: NeonDB):
         return []
 
 
-def payments_page(db: NeonDB):
+def payments_page(db: SupabaseDB):
     """Main payments management page"""
     st.header("💰 Rozliczenia")
     

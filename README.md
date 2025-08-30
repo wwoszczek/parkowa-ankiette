@@ -37,7 +37,7 @@ Application for organizing weekly football games with automatic signup managemen
 - PostgreSQL database
 
 📋 **Quick setup:**
-1. Add secret in GitHub repo: `NEON_DATABASE_URL`
+1. Add secret in GitHub repo: `SUPABASE_DATABASE_URL`
 2. Workflow is ready in `.github/workflows/scheduler.yml`
 3. **Done!** - scheduler works automatically
 

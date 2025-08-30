@@ -221,8 +221,8 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# Neon database files
-neon_config.json
-.neonctl/
+# Supabase database files
+supabase_config.json
+.supabase/
 database_setup.sql
-NEON_SETUP_GUIDE.md
+SUPABASE_SETUP_GUIDE.md

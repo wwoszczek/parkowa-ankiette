@@ -5,13 +5,13 @@ Functions for handling games in the database
 import streamlit as st
 import uuid
 from datetime import datetime
-from src.database import NeonDB
+from src.database import SupabaseDB
 from src.constants import TIMEZONE
 from src.utils.datetime_utils import get_next_game_time, parse_game_time
 
 
 @st.cache_data(ttl=60)  # Cache for 1 minute
-def get_active_games(_db: NeonDB):
+def get_active_games(_db: SupabaseDB):
     """Get active games with caching"""
     try:
         return _db.execute_query("SELECT * FROM games WHERE active = TRUE ORDER BY start_time")
@@ -20,7 +20,7 @@ def get_active_games(_db: NeonDB):
         return []
 
 
-def create_new_game_if_needed(db: NeonDB):
+def create_new_game_if_needed(db: SupabaseDB):
     """Creates new game if needed"""
     try:
         next_game = get_next_game_time()
@@ -50,7 +50,7 @@ def create_new_game_if_needed(db: NeonDB):
         return None
 
 
-def deactivate_past_games(db: NeonDB):
+def deactivate_past_games(db: SupabaseDB):
     """Deactivates games that have already taken place"""
     try:
         now = datetime.now(TIMEZONE)
@@ -69,7 +69,7 @@ def deactivate_past_games(db: NeonDB):
         st.error(f"Błąd podczas dezaktywacji gierek: {e}")
 
 
-def get_past_games(db: NeonDB):
+def get_past_games(db: SupabaseDB):
     """Gets inactive games (history)"""
     try:
         return db.execute_query("SELECT * FROM games WHERE active = FALSE ORDER BY start_time DESC")

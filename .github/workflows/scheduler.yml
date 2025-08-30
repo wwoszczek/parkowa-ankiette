@@ -14,7 +14,7 @@ on:
         type: boolean
 
 env:
-  NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+  SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
 
 jobs:
   scheduler:

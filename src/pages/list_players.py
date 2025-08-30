@@ -5,14 +5,14 @@ Page for listing signed up players for each game
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from src.database import NeonDB
+from src.database import SupabaseDB
 from src.constants import TIMEZONE
 from src.utils.game_utils import get_active_games
 from src.utils.signup_utils import get_signups_for_game
 from src.utils.datetime_utils import parse_game_time, parse_timestamp
 
 
-def list_page(db: NeonDB):
+def list_page(db: SupabaseDB):
     """Page with list of signed up players"""
     st.header("📋 Lista zapisanych")
     

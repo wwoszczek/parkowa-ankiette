@@ -5,10 +5,10 @@ Functions for handling teams in the database
 import streamlit as st
 import uuid
 import json
-from src.database import NeonDB
+from src.database import SupabaseDB
 
 
-def save_teams(db: NeonDB, game_id: str, teams: dict):
+def save_teams(db: SupabaseDB, game_id: str, teams: dict):
     """Saves team lineups to database"""
     try:
         # Remove previous lineups for this game
@@ -27,7 +27,7 @@ def save_teams(db: NeonDB, game_id: str, teams: dict):
         return False
 
 
-def get_teams_for_game(db: NeonDB, game_id: str):
+def get_teams_for_game(db: SupabaseDB, game_id: str):
     """Gets team lineups for a given game"""
     try:
         teams_data = db.execute_query("SELECT * FROM teams WHERE game_id = %s", (game_id,))

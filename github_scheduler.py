@@ -131,12 +131,12 @@ def activate_games_for_signup(connection) -> int:
 
 def get_database_connection():
     """Get database connection from GitHub Secrets"""
-    database_url = os.getenv('NEON_DATABASE_URL')
+    database_url = os.getenv('SUPABASE_DATABASE_URL')
     
     if not database_url:
-        raise ValueError("❌ Brak zmiennej NEON_DATABASE_URL w GitHub Secrets")
+        raise ValueError("❌ Brak zmiennej SUPABASE_DATABASE_URL w GitHub Secrets")
     
-    logger.info("✅ Łączenie z Neon PostgreSQL...")
+    logger.info("✅ Łączenie z Supabase PostgreSQL...")
     return psycopg2.connect(database_url, cursor_factory=RealDictCursor, sslmode='require')
 
 

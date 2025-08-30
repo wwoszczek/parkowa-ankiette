@@ -1,5 +1,5 @@
 """
-Neon PostgreSQL database configuration and connection management
+Supabase PostgreSQL database configuration and connection management
 """
 
 import os
@@ -12,7 +12,7 @@ from typing import Optional, List, Dict, Any
 # Load environment variables
 load_dotenv()
 
-class NeonDB:
+class SupabaseDB:
     def __init__(self):
         self.connection_string = self._get_connection_string()
         
@@ -20,14 +20,14 @@ class NeonDB:
         """Get database connection string from environment or Streamlit secrets"""
         try:
             # Try environment variable first
-            if os.getenv("NEON_DATABASE_URL"):
-                return os.getenv("NEON_DATABASE_URL")
+            if os.getenv("SUPABASE_DATABASE_URL"):
+                return os.getenv("SUPABASE_DATABASE_URL")
             
             # Fallback to Streamlit secrets
-            if hasattr(st, 'secrets') and 'neon' in st.secrets:
-                return st.secrets["neon"]["database_url"]
+            if hasattr(st, 'secrets') and 'supabase' in st.secrets:
+                return st.secrets["supabase"]["database_url"]
                 
-            raise Exception("Brak konfiguracji bazy danych. Ustaw NEON_DATABASE_URL w .env lub skonfiguruj secrets.toml")
+            raise Exception("Brak konfiguracji bazy danych. Ustaw SUPABASE_DATABASE_URL w .env lub skonfiguruj secrets.toml")
         except Exception as e:
             st.error(f"Błąd konfiguracji bazy danych: {e}")
             raise e
@@ -90,6 +90,6 @@ class NeonDB:
 
 # Global database instance
 @st.cache_resource
-def get_db() -> NeonDB:
+def get_db() -> SupabaseDB:
     """Get cached database instance"""
-    return NeonDB()
+    return SupabaseDB()

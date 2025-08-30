@@ -4,7 +4,7 @@ Game signup page
 
 import streamlit as st
 from datetime import datetime
-from src.database import NeonDB
+from src.database import SupabaseDB
 from src.constants import TIMEZONE
 from src.utils.game_utils import get_active_games
 from src.utils.signup_utils import add_signup, remove_signup
@@ -43,7 +43,7 @@ def clear_signup_cache():
         pass
 
 
-def signup_page(db: NeonDB):
+def signup_page(db: SupabaseDB):
     """Signup page"""
     st.header("⚽ Zapisy na gierkę")
     

@@ -1,5 +1,5 @@
 """
-Application configuration and Neon PostgreSQL initialization
+Application configuration and Supabase PostgreSQL initialization
 """
 
 import streamlit as st
@@ -7,7 +7,7 @@ from src.constants import TIMEZONE
 
 @st.cache_resource
 def init_database():
-    """Initialize Neon database connection"""
+    """Initialize Supabase database connection"""
     try:
         from src.database import get_db
         db = get_db()

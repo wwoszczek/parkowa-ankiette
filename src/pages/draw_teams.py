@@ -4,7 +4,7 @@ Page for drawing team lineups
 
 import streamlit as st
 from datetime import datetime
-from src.database import NeonDB
+from src.database import SupabaseDB
 from src.constants import TIMEZONE
 from src.utils.datetime_utils import is_draw_time_allowed, parse_game_time
 from src.utils.game_utils import get_active_games
@@ -50,7 +50,7 @@ def display_teams(teams_dict: dict):
                 st.write(f"{i}. {player}")
 
 
-def draw_page(db: NeonDB):
+def draw_page(db: SupabaseDB):
     """Team lineup drawing page"""
     st.header("🎲 Losowanie składów")
     
