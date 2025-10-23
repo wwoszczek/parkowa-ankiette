@@ -121,12 +121,6 @@ teams:
     players_per_team: [8, 8]
 ```
 
-### Timezone
-The application uses the `Europe/Warsaw` timezone. Can be changed in `src/config.py`:
-```python
-TIMEZONE = pytz.timezone('Europe/Warsaw')
-```
-
 ### Game Schedule
 - **Game day**: Wednesday 18:30
 - **Signups open**: Sunday 10:00
