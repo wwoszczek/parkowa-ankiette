@@ -3,7 +3,7 @@
 # ===== GAMES SCHEDULE =====
 game:
   day: 2  # day of the week (0=monday, 1=tuesday, ..., 6=sunday)
-  hour: 19
+  hour: 18
   minute: 30
 
 # ===== SIGNUP OPENING =====
