@@ -3,7 +3,7 @@ name: 🤖 Automatyczny Scheduler Gierek
 on:
   schedule:
     # UTC +0:00 - keep in mind
-    - cron: '0 8,14,19 * * *'
+    - cron: '0 9,14,19 * * *'
 
   workflow_dispatch:
     inputs:

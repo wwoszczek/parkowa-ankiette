@@ -104,34 +104,7 @@ draw:
   minute: 0
 ```
 
-**Day mapping:** 0=Monday, 1=Tuesday, 2=Wednesday, 3=Thursday, 4=Friday, 5=Saturday, 6=Sunday
-
-### 🎨 Team Composition Configuration
-In the same file, you can add new configurations for different numbers of players:
-
-```yaml
-teams:
-  12:
-    count: 2
-    colors: ["czerwona", "czarna"]
-    players_per_team: [6, 6]
-  16:  # New configuration
-    count: 2
-    colors: ["czerwona", "czarna"]
-    players_per_team: [8, 8]
-```
-
-### Timezone
-The application uses the `Europe/Warsaw` timezone. Can be changed in `src/config.py`:
-```python
-TIMEZONE = pytz.timezone('Europe/Warsaw')
-```
-
 ### Game Schedule
 - **Game day**: Wednesday 18:30
 - **Signups open**: Sunday 10:00
 - **Drawing**: Wednesday from 8:00
-
-## 🤝 Contact
-
-Direct all questions and suggestions to GitHub Issues.
