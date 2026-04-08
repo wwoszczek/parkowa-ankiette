@@ -5,6 +5,7 @@ Functions for handling teams in the database
 import streamlit as st
 import uuid
 import json
+import ast
 from src.database import SupabaseDB
 
 
@@ -41,44 +42,58 @@ def get_teams_for_game(db: SupabaseDB, game_id: str):
         if not teams_data:
             return []
 
+        def normalize_players(players_value):
+            """Normalizes various DB formats into a list of player nicknames."""
+            if players_value is None:
+                return []
+
+            if isinstance(players_value, list):
+                return [str(player) for player in players_value if player is not None]
+
+            if isinstance(players_value, tuple):
+                return [str(player) for player in players_value if player is not None]
+
+            if isinstance(players_value, str):
+                players_str = players_value.strip()
+                if not players_str:
+                    return []
+
+                # Preferred format: JSON array string.
+                try:
+                    parsed = json.loads(players_str)
+                    if isinstance(parsed, list):
+                        return [str(player) for player in parsed if player is not None]
+                    if isinstance(parsed, str):
+                        return [parsed] if parsed else []
+                except json.JSONDecodeError:
+                    pass
+
+                # Legacy format: Python-like list string "['name1', 'name2']".
+                if players_str.startswith("[") and players_str.endswith("]"):
+                    try:
+                        parsed = ast.literal_eval(players_str)
+                        if isinstance(parsed, list):
+                            return [
+                                str(player) for player in parsed if player is not None
+                            ]
+                        return [str(parsed)] if parsed is not None else []
+                    except Exception:
+                        return [
+                            p.strip(" '\"[]")
+                            for p in players_str.split(",")
+                            if p.strip(" '\"[]")
+                        ]
+
+                # Single nickname saved as plain text.
+                return [players_str]
+
+            # Fallback for unexpected types.
+            return [str(players_value)]
+
         # Parse players data back to Python lists (supports JSON strings and legacy formats)
         for team in teams_data:
             players_value = team.get("players")
-
-            if isinstance(players_value, list):
-                # Already parsed by driver/db layer
-                continue
-
-            try:
-                team["players"] = json.loads(players_value)
-            except (json.JSONDecodeError, TypeError):
-                if isinstance(players_value, str):
-                    # Fallback for old string format data
-                    players_str = players_value
-                    if players_str.startswith("[") and players_str.endswith("]"):
-                        # Try to parse old format: "['name1', 'name2']"
-                        import ast
-
-                        try:
-                            parsed = ast.literal_eval(players_str)
-                            team["players"] = (
-                                parsed if isinstance(parsed, list) else [str(parsed)]
-                            )
-                        except Exception:
-                            # If all else fails, split by comma and clean
-                            team["players"] = [
-                                p.strip(" '\"[]")
-                                for p in players_str.split(",")
-                                if p.strip(" '\"[]")
-                            ]
-                    else:
-                        # Single player or malformed data
-                        team["players"] = [players_str] if players_str else []
-                elif players_value is None:
-                    team["players"] = []
-                else:
-                    # Unexpected type: keep data usable for UI
-                    team["players"] = [str(players_value)]
+            team["players"] = normalize_players(players_value)
 
         return teams_data
     except Exception as e:
