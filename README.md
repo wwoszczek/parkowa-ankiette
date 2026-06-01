@@ -60,27 +60,6 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-
-## 📊 Database Structure
-
-### Table `games`
-- `id` (UUID) - Unique game identifier
-- `start_time` (timestamp) - Start date and time
-- `active` (boolean) - Whether the game is active
-
-### Table `signups`
-- `id` (UUID) - Unique signup identifier
-- `game_id` (UUID) - Reference to game
-- `nickname` (text) - Player nickname
-- `password_hash` (text) - Hashed password
-- `timestamp` (timestamp) - Signup time
-
-### Table `teams`
-- `id` (UUID) - Unique team identifier
-- `game_id` (UUID) - Reference to game
-- `team_color` (text) - Team color
-- `players` (text[]) - List of players in team
-
 ### ⏰ Time Parameters
 All time settings can be easily changed in the `game_consts.yaml` file:
 
