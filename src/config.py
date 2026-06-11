@@ -3,7 +3,6 @@ Application configuration and Supabase PostgreSQL initialization
 """
 
 import streamlit as st
-from src.constants import TIMEZONE
 
 @st.cache_resource
 def init_database():
@@ -21,7 +20,7 @@ def init_database():
 def setup_page_config():
     """Configure Streamlit page settings"""
     st.set_page_config(
-        page_title="Parkowa - Gierki Piłkarskie",
-        page_icon="⚽",
-        layout="wide"
+        page_title="Parkowa – cotygodniowe gierki",
+        page_icon=":material/sports_soccer:",
+        layout="centered",
     )

@@ -20,30 +20,24 @@ jobs:
   scheduler:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    
+
     steps:
     - name: 📥 Checkout repository
       uses: actions/checkout@v4
-    
-    - name: 🐍 Setup Python
-      uses: actions/setup-python@v4
+
+    - name: 📦 Setup uv
+      uses: astral-sh/setup-uv@v5
       with:
-        python-version: '3.9'
-        cache: 'pip'
-    
-    - name: 📦 Install dependencies
-      run: |
-        pip install --upgrade pip
-        # Install only the dependencies needed for the scheduler (no Streamlit)
-        pip install psycopg2-binary pyyaml pytz
-    
+        enable-cache: true
+
     - name: 🚀 Run scheduler
       run: |
         echo "🤖 Run games scheduler..."
-        python github_scheduler.py
+        # Install only the scheduler dependency group (no Streamlit) from uv.lock
+        uv run --frozen --only-group scheduler python github_scheduler.py
       env:
         FORCE_RUN: ${{ github.event.inputs.force_run }}
-    
+
     - name: 📊 Upload logs as artifacts (on failure)
       if: failure()
       uses: actions/upload-artifact@v4
@@ -53,7 +47,7 @@ jobs:
           *.log
           /tmp/scheduler-*.log
         retention-days: 7
-    
+
     - name: 💬 Notify on failure (optional)
       if: failure()
       run: |

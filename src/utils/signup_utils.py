@@ -1,18 +1,20 @@
 """
-Functions for handling player signups
+Player signups: account-based entries and guests added by signed-in users.
 """
 
-import streamlit as st
 import uuid
 from datetime import datetime
-from src.database import SupabaseDB
+
+import streamlit as st
+
 from src.constants import TIMEZONE
-from src.utils.auth import hash_password, verify_password
-from src.utils.security import sanitize_input, log_security_event
+from src.database import SupabaseDB
+from src.game_config import MAX_GUESTS_PER_USER
+from src.utils.validation import sanitize_input, validate_player_name
 
 
 def get_signups_for_game(db: SupabaseDB, game_id: str):
-    """Gets signups for a given game"""
+    """Gets signups for a given game (oldest first)"""
     try:
         return db.execute_query(
             "SELECT * FROM signups WHERE game_id = %s ORDER BY timestamp",
@@ -23,62 +25,107 @@ def get_signups_for_game(db: SupabaseDB, game_id: str):
         return []
 
 
-def add_signup(db: SupabaseDB, game_id: str, nickname: str, password: str):
-    """Adds player signup"""
-    try:
-        # Data sanitization
-        nickname = sanitize_input(nickname)
-        password = sanitize_input(password)
-        
-        # Check if nickname already exists in this game
-        existing = db.execute_query(
-            "SELECT * FROM signups WHERE game_id = %s AND nickname = %s",
-            (game_id, nickname)
-        )
-        if existing:
-            log_security_event("duplicate_signup_attempt", f"nickname: {nickname}, game: {game_id[:8]}...")
-            return False, "Ten nickname jest już zajęty w tej gierce!"
-        
-        # Add signup
-        signup_id = str(uuid.uuid4())
-        db.execute_query(
-            "INSERT INTO signups (id, game_id, nickname, password_hash, timestamp) VALUES (%s, %s, %s, %s, %s)",
-            (signup_id, game_id, nickname, hash_password(password), datetime.now(TIMEZONE).isoformat())
-        )
-        return True, "Zapisano pomyślnie!"
-    except Exception as e:
-        error_msg = str(e)
-        # Don't log full error if it may contain sensitive data
-        safe_error = error_msg[:100] + "..." if len(error_msg) > 100 else error_msg
-        log_security_event("signup_error", f"error: {safe_error}")
-        return False, f"Błąd podczas zapisu: {safe_error}"
+def get_account_signup(db: SupabaseDB, game_id: str, email: str):
+    """The signed-in user's own (non-guest) entry, or None."""
+    rows = db.execute_query(
+        "SELECT * FROM signups WHERE game_id = %s AND is_guest = FALSE AND LOWER(user_email) = LOWER(%s)",
+        (game_id, email)
+    )
+    return rows[0] if rows else None
 
 
-def remove_signup(db: SupabaseDB, game_id: str, nickname: str, password: str):
-    """Removes player signup"""
-    try:
-        # Data sanitization
-        nickname = sanitize_input(nickname)
-        password = sanitize_input(password)
-        
-        # Find signup
-        signups = db.execute_query(
-            "SELECT * FROM signups WHERE game_id = %s AND nickname = %s",
-            (game_id, nickname)
+def get_guests_added_by(db: SupabaseDB, game_id: str, email: str):
+    """Guest entries added by the given account for a game."""
+    return db.execute_query(
+        "SELECT * FROM signups WHERE game_id = %s AND is_guest = TRUE AND LOWER(added_by_email) = LOWER(%s) "
+        "ORDER BY timestamp",
+        (game_id, email)
+    ) or []
+
+
+def _nickname_taken(db: SupabaseDB, game_id: str, nickname: str) -> bool:
+    rows = db.execute_query(
+        "SELECT 1 FROM signups WHERE game_id = %s AND nickname = %s",
+        (game_id, nickname)
+    )
+    return bool(rows)
+
+
+def _insert_signup(db: SupabaseDB, game_id: str, nickname: str,
+                   user_email=None, is_guest=False, added_by_email=None):
+    db.execute_query(
+        "INSERT INTO signups (id, game_id, nickname, user_email, is_guest, added_by_email, timestamp) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+        (
+            str(uuid.uuid4()), game_id, nickname,
+            user_email, is_guest, added_by_email,
+            datetime.now(TIMEZONE).isoformat(),
         )
-        if not signups:
-            return False, "Nie znaleziono zapisu z tym nickiem!"
-        
-        signup = signups[0]
-        if not verify_password(password, signup['password_hash']):
-            log_security_event("invalid_password_attempt", f"nickname: {nickname}, game: {game_id[:8]}...")
-            return False, "Nieprawidłowe hasło!"
-        
-        # Remove signup
-        db.execute_query("DELETE FROM signups WHERE id = %s", (signup['id'],))
-        return True, "Wypisano pomyślnie!"
+    )
+
+
+def add_account_signup(db: SupabaseDB, game_id: str, nickname: str, email: str):
+    """Signs up the logged-in user under the given display name."""
+    try:
+        nickname = sanitize_input(nickname)
+        valid, error = validate_player_name(nickname)
+        if not valid:
+            return False, error
+
+        if get_account_signup(db, game_id, email):
+            return False, "Jesteś już na liście!"
+        if _nickname_taken(db, game_id, nickname):
+            return False, "Ten nick jest już zajęty w tej gierce — wybierz inny."
+
+        _insert_signup(db, game_id, nickname, user_email=email)
+        return True, "Jesteś na liście!"
     except Exception as e:
-        error_msg = str(e)
-        safe_error = error_msg[:100] + "..." if len(error_msg) > 100 else error_msg
-        log_security_event("signout_error", f"error: {safe_error}")
-        return False, f"Błąd podczas wypisywania: {safe_error}"
+        return False, f"Błąd podczas zapisu: {str(e)[:120]}"
+
+
+def add_guest_signup(db: SupabaseDB, game_id: str, guest_name: str, added_by_email: str):
+    """Adds a guest (player without an account) on behalf of a logged-in user."""
+    try:
+        guest_name = sanitize_input(guest_name)
+        valid, error = validate_player_name(guest_name)
+        if not valid:
+            return False, error
+
+        if len(get_guests_added_by(db, game_id, added_by_email)) >= MAX_GUESTS_PER_USER:
+            return False, f"Możesz dodać maksymalnie {MAX_GUESTS_PER_USER} gości."
+        if _nickname_taken(db, game_id, guest_name):
+            return False, "Gracz o tym imieniu/nicku już jest na liście."
+
+        _insert_signup(db, game_id, guest_name, is_guest=True, added_by_email=added_by_email)
+        return True, f"Dodano gościa: {guest_name}"
+    except Exception as e:
+        return False, f"Błąd podczas dodawania gościa: {str(e)[:120]}"
+
+
+def remove_signup(db: SupabaseDB, signup_id: str, requester_email: str, admin: bool = False):
+    """
+    Removes an entry. Allowed for: the entry's owner (own signup),
+    the user who added the guest, and admins.
+    """
+    try:
+        rows = db.execute_query("SELECT * FROM signups WHERE id = %s", (signup_id,))
+        if not rows:
+            return False, "Nie znaleziono zapisu."
+        entry = rows[0]
+
+        requester = (requester_email or "").lower()
+        owner = (entry.get("user_email") or "").lower()
+        adder = (entry.get("added_by_email") or "").lower()
+        allowed = admin or (
+            requester and (
+                (not entry.get("is_guest") and owner == requester)
+                or (entry.get("is_guest") and adder == requester)
+            )
+        )
+        if not allowed:
+            return False, "Możesz wypisać tylko siebie i swoich gości."
+
+        db.execute_query("DELETE FROM signups WHERE id = %s", (signup_id,))
+        return True, f"Wypisano: {entry['nickname']}"
+    except Exception as e:
+        return False, f"Błąd podczas wypisywania: {str(e)[:120]}"

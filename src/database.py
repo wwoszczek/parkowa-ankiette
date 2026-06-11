@@ -38,7 +38,8 @@ class SupabaseDB:
             return psycopg2.connect(
                 self.connection_string,
                 cursor_factory=RealDictCursor,
-                sslmode='require'
+                # 'require' for Supabase; override only for local development
+                sslmode=os.getenv("DB_SSLMODE", "require")
             )
         except Exception as e:
             st.error(f"Błąd połączenia z bazą danych: {e}")

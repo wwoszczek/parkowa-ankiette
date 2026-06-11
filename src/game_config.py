@@ -3,7 +3,6 @@ Application time configuration - loaded from YAML file
 """
 
 import yaml
-import os
 from pathlib import Path
 
 # Path to configuration file
@@ -35,6 +34,9 @@ DRAW_ALLOWED_DAY = _config['draw']['day']
 DRAW_ALLOWED_HOUR = _config['draw']['hour']
 DRAW_ALLOWED_MINUTE = _config['draw']['minute']
 
+# ===== GUESTS =====
+MAX_GUESTS_PER_USER = int(_config.get('guests', {}).get('max_per_user', 2))
+
 # ===== TEAM LINEUPS =====
 TEAM_CONFIGS = {}
 for players_count, config in _config['teams'].items():
@@ -44,37 +46,21 @@ for players_count, config in _config['teams'].items():
         "players_per_team": config['players_per_team']
     }
 
-ALLOWED_PLAYER_COUNTS = list(TEAM_CONFIGS.keys())
+ALLOWED_PLAYER_COUNTS = sorted(TEAM_CONFIGS.keys())
 
 # ===== MESSAGES =====
 MANUAL_DRAW_MESSAGE = _config['messages']['manual_draw']
 
-# ===== PAYMENTS =====
-# Payment configuration loaded from Streamlit secrets for security
-import streamlit as st
-try:
-    TREASURER_PASSWORD = st.secrets["treasurer_password"]
-except KeyError:
-    TREASURER_PASSWORD = "default_password"  # Fallback for development
+# Day names: nominative ("środa") and accusative ("w środę")
+DAY_NAMES = _config['day_names']
+DAY_NAMES_ACCUSATIVE = _config.get('day_names_accusative', DAY_NAMES)
 
-try:
-    BLIK_NUMBER = st.secrets["blik_number"]
-except KeyError:
-    # Fallback to YAML config for backward compatibility
-    try:
-        BLIK_NUMBER = _config['payments']['blik_number']
-    except KeyError:
-        BLIK_NUMBER = "Not configured - check Streamlit secrets"  # Clear fallback message
-
-# Generating messages based on configuration
-_day_names = _config['day_names']
-
-DRAW_NOT_AVAILABLE_MESSAGE = (
-    f"Losowanie składów jest dostępne tylko w {_day_names[DRAW_ALLOWED_DAY]} "
-    f"od {DRAW_ALLOWED_HOUR:02d}:{DRAW_ALLOWED_MINUTE:02d}!"
+DRAW_OPENING_MESSAGE = (
+    f"Losowanie składów otwiera się w {DAY_NAMES_ACCUSATIVE[DRAW_ALLOWED_DAY]} "
+    f"o {DRAW_ALLOWED_HOUR:02d}:{DRAW_ALLOWED_MINUTE:02d}."
 )
 
 SIGNUP_OPENING_MESSAGE = (
-    f"Nowa gierka otworzy się w {_day_names[SIGNUP_OPEN_DAY]} "
+    f"Nowa gierka otworzy się w {DAY_NAMES_ACCUSATIVE[SIGNUP_OPEN_DAY]} "
     f"o {SIGNUP_OPEN_HOUR:02d}:{SIGNUP_OPEN_MINUTE:02d}."
 )

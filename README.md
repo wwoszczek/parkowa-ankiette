@@ -1,110 +1,92 @@
-# 🏆 Parkowa - Weekly Football Games
+# Parkowa - Weekly Football Games
 
-Application for organizing weekly football games with automatic signup management, team composition drawing, and game history.
+Streamlit app for organizing weekly pickup football: signups, random team
+drawing and game history. Polish UI, Supabase PostgreSQL, free-tier friendly.
 
-## ⚡ Features
+## Features
 
-### 👥 Signup System
-- Players sign up by providing **nickname** and **password**
-- Passwords are securely hashed (bcrypt)
-- Visible signup order
-- Ability to unregister only with correct password
+### Signups
+- Login with **Google or Facebook** (Streamlit native `st.login`, no passwords)
+- One-click signup under an editable display name
+- **Guests**: a signed-in user can add friends without an account
+  (configurable limit per user); only the adder or an admin can remove them
+- Self sign-out at any time; admins can remove any entry
 
-### 🎲 Team Drawing
-- Automatic team division:
-  - **12 or 14 people** → 2 teams (red, black)
-  - **18 people** → 3 teams (white, red, black)
-  - Other numbers → message about need for manual drawing
-- Ability to redraw teams
+### Team drawing
+- Automatic split based on player count (configured in `game_consts.yaml`):
+  - **12 / 14 players** → 2 teams (czerwona, czarna)
+  - **18 players** → 3 teams (biała, czerwona, czarna)
+- Drawing opens at a configured time window; admins can (re)draw any time
+- Other counts → manual draw message
 
-### 💰 Payments (for treasurer)
-- **Password protected**
-- **Quick debtor overview** - summary of who owes how much
-- **Payment management** - marking who paid for historical games
+### History
+- Archive of past games: pick a game, see players and drawn teams instantly
 
-### 📚 Game History
-- Full history of all games
-- List of registered participants
-- Team compositions after drawing
+### Automatic game management
+- **GitHub Actions scheduler** (`.github/workflows/scheduler.yml`) creates the
+  next game, opens signups and closes past games - no server needed
+  (`uv run --only-group scheduler python github_scheduler.py`)
 
-### 🗓️ Automatic Game Management
-- **GitHub Actions Scheduler** ensures that the game list and their activity status are up to date
+## Pages
 
-## 🚀 Installation and Setup
+| URL | Page |
+|---|---|
+| `/zapisy` | signup form + live player list |
+| `/sklady` | drawn teams + draw controls |
+| `/historia` | past games archive |
 
-### Requirements
-- Python 3.8+
-- PostgreSQL database
+## Setup
 
-📋 **Quick setup:**
-1. Add secret in GitHub repo: `SUPABASE_DATABASE_URL`
-2. Workflow is ready in `.github/workflows/scheduler.yml`
-3. **Done!** - scheduler works automatically
+### 1. Install & run
 
-### 1. Clone repository
+The project is managed with [uv](https://docs.astral.sh/uv/):
+
 ```bash
-git clone https://github.com/wwoszczek/parkowa-ankiette.git
-cd parkowa-ankiette
+uv run streamlit run app.py     # syncs deps from uv.lock, then runs
 ```
 
-### 2. Install dependencies
+`requirements.txt` is generated from the lockfile (`uv export`) and kept only
+for Streamlit Community Cloud, which installs from it. After changing
+dependencies in `pyproject.toml`, refresh both:
+
 ```bash
-pip install -r requirements.txt
+uv lock
+uv export --no-hashes --no-emit-project --no-default-groups -o requirements.txt
 ```
 
-### 3. Database configuration
+### 2. Database (Supabase)
 
+See `SUPABASE_SETUP_GUIDE.md`. Fresh database: run `database_setup.sql`,
+then `migrations/001_social_auth.sql`. Existing database: run only the
+migration.
 
-### 4. Run application
-```bash
-streamlit run app.py
-```
+Connection string goes to `.env` (`SUPABASE_DATABASE_URL=...`) or
+`.streamlit/secrets.toml` (`[supabase] database_url`).
 
+### 3. Login (Google / Facebook)
 
-## 📊 Database Structure
+See `AUTH_SETUP_GUIDE.md` - OAuth clients, secrets layout, admin list and
+the local `dev_user` mode.
 
-### Table `games`
-- `id` (UUID) - Unique game identifier
-- `start_time` (timestamp) - Start date and time
-- `active` (boolean) - Whether the game is active
+### 4. Scheduler
 
-### Table `signups`
-- `id` (UUID) - Unique signup identifier
-- `game_id` (UUID) - Reference to game
-- `nickname` (text) - Player nickname
-- `password_hash` (text) - Hashed password
-- `timestamp` (timestamp) - Signup time
+Add the `SUPABASE_DATABASE_URL` secret in the GitHub repo - the workflow in
+`.github/workflows/scheduler.yml` does the rest.
 
-### Table `teams`
-- `id` (UUID) - Unique team identifier
-- `game_id` (UUID) - Reference to game
-- `team_color` (text) - Team color
-- `players` (text[]) - List of players in team
+## Database structure
 
-### ⏰ Time Parameters
-All time settings can be easily changed in the `game_consts.yaml` file:
+- `games` - `id`, `start_time`, `active`
+- `signups` - `id`, `game_id`, `nickname`, `user_email`, `is_guest`,
+  `added_by_email`, `timestamp` (`password_hash` kept for legacy rows)
+- `teams` - `id`, `game_id`, `team_color`, `players` (JSON)
+
+## Schedule configuration
+
+All times live in `game_consts.yaml` (Python weekday: 0=Monday):
 
 ```yaml
-# Games take place on Wednesdays at 18:30
-game:
-  day: 2      # 2 = Wednesday
-  hour: 18
-  minute: 30
-
-# Signups open on Mondays at 10:00
-signup:
-  day: 0      # 0 = Monday
-  hour: 10
-  minute: 0
-
-# Drawing possible on Wednesdays from 15:00
-draw:
-  day: 2      # 2 = Wednesday
-  hour: 15
-  minute: 0
+game:   { day: 2, hour: 18, minute: 30 }  # Wednesday 18:30
+signup: { day: 6, hour: 10, minute: 0 }   # opens Sunday 10:00
+draw:   { day: 2, hour: 8,  minute: 0 }   # draw from Wednesday 8:00
+guests: { max_per_user: 2 }
 ```
-
-### Game Schedule
-- **Game day**: Wednesday 18:30
-- **Signups open**: Sunday 10:00
-- **Drawing**: Wednesday from 8:00

@@ -1,159 +1,140 @@
 """
-Game signup page
+Signups page: join the upcoming game and see who is playing.
 """
 
 import streamlit as st
-from datetime import datetime
-from src.database import SupabaseDB
-from src.constants import TIMEZONE
+
+from src.config import init_database
+from src.game_config import MAX_GUESTS_PER_USER, SIGNUP_OPENING_MESSAGE
+from src.ui import components as ui
+from src.utils.auth import get_current_user, is_admin, login_panel, logout_control
+from src.utils.datetime_utils import format_game_date, get_next_game_time, parse_game_time
 from src.utils.game_utils import get_active_games
-from src.utils.signup_utils import add_signup, remove_signup
-from src.utils.datetime_utils import parse_game_time
-from src.utils.security import (
-    RateLimiter, 
-    validate_nickname, 
-    validate_password, 
-    sanitize_input,
-    log_security_event
+from src.utils.signup_utils import (
+    add_account_signup,
+    add_guest_signup,
+    get_account_signup,
+    get_guests_added_by,
+    get_signups_for_game,
+    remove_signup,
 )
-from src.game_config import SIGNUP_OPENING_MESSAGE
 
 
-@st.cache_data(ttl=30)  # Cache for 30 seconds
-def get_game_options_cached(active_games):
-    """Cache game options to avoid repeated processing"""
-    game_options = []
-    game_mapping = {}
-    for game in active_games:
-        game_time = parse_game_time(game['start_time'])
-        display_name = game_time.strftime('%d.%m.%Y %H:%M')
-        game_options.append(display_name)
-        game_mapping[display_name] = game
-    return game_options, game_mapping
+def _select_game(games):
+    if len(games) == 1:
+        return games[0]
+    labels = [format_game_date(parse_game_time(g["start_time"])) for g in games]
+    idx = st.selectbox("Wybierz gierkę", range(len(games)), format_func=lambda i: labels[i])
+    return games[idx]
 
 
-def clear_signup_cache():
-    """Clear signup-related cache to ensure fresh data"""
-    get_game_options_cached.clear()
-    # Also clear game cache from utils
-    try:
-        from src.utils.game_utils import get_active_games
-        get_active_games.clear()
-    except:
-        pass
+def _finish(ok: bool, message: str):
+    """Store the outcome and rerun so lists refresh immediately."""
+    st.session_state["flash"] = ("ok" if ok else "err", message)
+    st.rerun()
 
 
-def signup_page(db: SupabaseDB):
-    """Signup page"""
-    st.header("⚽ Zapisy na gierkę")
-    
-    # Info about signup process
-    st.info("""
-    ℹ️ **Jak działają zapisy:**
-    - Zapisy otwierają się w każdą niedzielę o 10:00
-    - Hasło ustawione przy zapisie jest potrzebne tylko w razie wypisu
-    - Jest to mechanizm zabezpieczający przed niechcianymi i przypadkowymi wypisami
-    """)
-    
-    # Get active games
-    active_games = get_active_games(db)
-    
-    if not active_games:
-        st.warning(f"Brak aktywnych gierek. {SIGNUP_OPENING_MESSAGE}")
-        return
+def _show_flash():
+    flash = st.session_state.pop("flash", None)
+    if flash:
+        kind, message = flash
+        (st.success if kind == "ok" else st.error)(message)
 
-    # Game selection (cached)
-    game_options, game_mapping = get_game_options_cached(tuple(active_games))  # Convert to tuple for hashing
-    
-    selected_game_str = st.selectbox("Wybierz gierkę:", game_options)
-    if not selected_game_str:
-        return
-    
-    selected_game = game_mapping[selected_game_str]
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Zapisz się")
-        
-        # Check rate limiting
-        if not RateLimiter.check_signup_rate_limit("signup_attempts", 150, 250):
-            cooldown = RateLimiter.get_remaining_cooldown("signup_attempts", 250)
-            st.error(f"⏰ Za dużo prób zapisu. Spróbuj ponownie za {cooldown} sekund.")
-            log_security_event("rate_limit", f"signup attempts exceeded")
-            st.stop()  # Use st.stop() instead of return to prevent further processing
-        
+
+def _account_panel(db, game, user):
+    ui.account_strip(user["name"])
+    my_entry = get_account_signup(db, game["id"], user["email"])
+    if my_entry:
+        st.success(f"Jesteś na liście jako **{my_entry['nickname']}**.")
+        if st.button("Wypisz się", key="remove_self", width="stretch"):
+            ok, msg = remove_signup(db, my_entry["id"], user["email"])
+            _finish(ok, msg)
+    else:
         with st.form("signup_form"):
-            nickname = st.text_input("Nickname:")
-            password = st.text_input("Hasło:", type="password")
-            submit = st.form_submit_button("Zapisz się")
-            
-            if submit:
-                # Sanitization and validation
-                nickname = sanitize_input(nickname)
-                password = sanitize_input(password)
-                
-                # Nickname validation
-                nickname_valid, nickname_error = validate_nickname(nickname)
-                if not nickname_valid:
-                    st.error(f"❌ Błąd nickname: {nickname_error}")
-                    log_security_event("invalid_nickname", f"nickname: {nickname[:10]}...")
-                    st.stop()
-                
-                # Password validation
-                password_valid, password_error = validate_password(password)
-                if not password_valid:
-                    st.error(f"❌ Błąd hasła: {password_error}")
-                    log_security_event("invalid_password", "password validation failed")
-                    st.stop()
-                
-                # Signup attempt
-                with st.spinner("Zapisuję..."):
-                    success, message = add_signup(db, selected_game['id'], nickname, password)
-                    
-                if success:
-                    st.success(f"✅ {message}")
-                    log_security_event("successful_signup", f"nickname: {nickname}")
-                    # Clear cache to ensure fresh data
-                    clear_signup_cache()
-                else:
-                    st.error(f"❌ {message}")
-                    log_security_event("failed_signup", f"nickname: {nickname}, error: {message[:50]}...")
-    
-    with col2:
-        st.subheader("Wypisz się")
-        
-        # Check rate limiting (separate limit for signouts)
-        if not RateLimiter.check_signup_rate_limit("signout_attempts", 250, 250):
-            cooldown = RateLimiter.get_remaining_cooldown("signout_attempts", 250)
-            st.error(f"⏰ Za dużo prób wypisu. Spróbuj ponownie za {cooldown} sekund.")
-            log_security_event("rate_limit", f"signout attempts exceeded")
-            st.stop()  # Use st.stop() instead of return to prevent further processing
-        
-        with st.form("signout_form"):
-            nickname_out = st.text_input("Nickname:", key="signout_nick")
-            password_out = st.text_input("Hasło:", type="password", key="signout_pass")
-            submit_out = st.form_submit_button("Wypisz się")
-            
-            if submit_out:
-                # Sanitization
-                nickname_out = sanitize_input(nickname_out)
-                password_out = sanitize_input(password_out)
-                
-                # Basic validation
-                if not nickname_out or not password_out:
-                    st.error("❌ Podaj nickname i hasło")
-                    st.stop()
-                
-                # Signout attempt
-                with st.spinner("Wypisuję..."):
-                    success, message = remove_signup(db, selected_game['id'], nickname_out, password_out)
-                    
-                if success:
-                    st.success(f"✅ {message}")
-                    log_security_event("successful_signout", f"nickname: {nickname_out}")
-                    # Clear cache to ensure fresh data
-                    clear_signup_cache()
-                else:
-                    st.error(f"❌ {message}")
-                    log_security_event("failed_signout", f"nickname: {nickname_out}, error: {message[:50]}...")
+            default_nick = user["name"].split()[0] if user.get("name") else ""
+            nickname = st.text_input("Twój nick na liście", value=default_nick, max_chars=20)
+            if st.form_submit_button("Zapisz się", type="primary", width="stretch"):
+                ok, msg = add_account_signup(db, game["id"], nickname, user["email"])
+                _finish(ok, msg)
+    logout_control()
+
+
+def _guests_panel(db, game, user):
+    ui.section("Twoi goście")
+    guests = get_guests_added_by(db, game["id"], user["email"])
+
+    for guest in guests:
+        name_col, btn_col = st.columns([3, 2])
+        name_col.markdown(f"**{guest['nickname']}**")
+        if btn_col.button("Wypisz", key=f"remove_guest_{guest['id']}", width="stretch"):
+            ok, msg = remove_signup(db, guest["id"], user["email"])
+            _finish(ok, msg)
+
+    remaining = MAX_GUESTS_PER_USER - len(guests)
+    if remaining > 0:
+        with st.form("guest_form", clear_on_submit=True):
+            guest_name = st.text_input(
+                "Imię/nick gościa", max_chars=20,
+                placeholder="np. Maciek (kolega bez konta)",
+            )
+            if st.form_submit_button("Dodaj gościa", width="stretch"):
+                ok, msg = add_guest_signup(db, game["id"], guest_name, user["email"])
+                _finish(ok, msg)
+        st.caption(f"Goście nie potrzebują konta — wypisać może ich tylko ten, kto ich dodał. "
+                   f"Limit: {MAX_GUESTS_PER_USER} na osobę.")
+    else:
+        st.caption(f"Wykorzystany limit gości ({MAX_GUESTS_PER_USER}).")
+
+
+def _admin_panel(db, game, signups, user):
+    with st.expander("Zarządzanie listą (admin)"):
+        if not signups:
+            st.caption("Lista jest pusta.")
+        for entry in signups:
+            label = entry["nickname"] + (" · gość" if entry.get("is_guest") else "")
+            name_col, btn_col = st.columns([4, 1])
+            name_col.markdown(label)
+            if btn_col.button("Usuń", key=f"remove_admin_{entry['id']}", width="stretch"):
+                ok, msg = remove_signup(db, entry["id"], user["email"], admin=True)
+                _finish(ok, msg)
+
+
+def signup_page():
+    db = init_database()
+    if not db:
+        return
+
+    ui.page_header("Zapisy", "Dołącz do najbliższej gierki i zobacz, kto gra.")
+
+    games = get_active_games(db)
+    if not games:
+        ui.hero(get_next_game_time(), chips=["zapisy wkrótce"])
+        ui.empty_state("Zapisy są jeszcze zamknięte", SIGNUP_OPENING_MESSAGE)
+        return
+
+    game = _select_game(games)
+    game_dt = parse_game_time(game["start_time"])
+    signups = get_signups_for_game(db, game["id"])
+
+    user = get_current_user()
+    email = user["email"] if user else None
+
+    ui.hero(game_dt, chips=[ui.pl_players(len(signups))])
+
+    list_col, panel_col = st.columns([5, 4], gap="large")
+
+    with list_col:
+        ui.section("Lista graczy")
+        ui.players_table(signups, current_email=email)
+
+    with panel_col:
+        ui.section("Twój zapis")
+        _show_flash()
+        if not user:
+            login_panel()
+        else:
+            _account_panel(db, game, user)
+            _guests_panel(db, game, user)
+
+    if user and is_admin(user):
+        _admin_panel(db, game, signups, user)

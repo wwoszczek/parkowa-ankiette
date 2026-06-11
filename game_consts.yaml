@@ -18,6 +18,11 @@ draw:
   hour: 8
   minute: 0
 
+# ===== GUESTS =====
+# Signed-in users can add this many guests (friends without an account).
+guests:
+  max_per_user: 2
+
 # ===== TEAMS CONFIGURATION =====
 # Configuration for automatic team drawing for different player counts
 teams:
@@ -25,12 +30,12 @@ teams:
     count: 2
     colors: ["czerwona", "czarna"]
     players_per_team: [6, 6]
-  
+
   14:
     count: 2
     colors: ["czerwona", "czarna"]
     players_per_team: [7, 7]
-  
+
   18:
     count: 3
     colors: ["biała", "czerwona", "czarna"]
@@ -40,9 +45,6 @@ teams:
 messages:
   manual_draw: "**LOSOWANIE MUSI ODBYĆ SIĘ RĘCZNIE, NIETYPOWA LICZBA UCZESTNIKÓW**"
 
-# ===== PAYMENTS =====
-# payments:
-#   blik_number: "123123123"  # Moved to Streamlit secrets for security
-  
-# DAY NAMES
+# DAY NAMES (nominative + accusative, e.g. "w środę")
 day_names: ["poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota", "niedziela"]
+day_names_accusative: ["poniedziałek", "wtorek", "środę", "czwartek", "piątek", "sobotę", "niedzielę"]
