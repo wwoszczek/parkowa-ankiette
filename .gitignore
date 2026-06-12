@@ -226,3 +226,4 @@ supabase_config.json
 .supabase/
 database_setup.sql
 SUPABASE_SETUP_GUIDE.md
+scripts/

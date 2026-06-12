@@ -6,7 +6,7 @@ drawing and game history. Polish UI, Supabase PostgreSQL, free-tier friendly.
 ## Features
 
 ### Signups
-- Login with **Google or Facebook** (Streamlit native `st.login`, no passwords)
+- Login with **Google** (Streamlit native `st.login`, no passwords)
 - One-click signup under an editable display name
 - **Guests**: a signed-in user can add friends without an account
   (configurable limit per user); only the adder or an admin can remove them
@@ -56,17 +56,43 @@ uv export --no-hashes --no-emit-project --no-default-groups -o requirements.txt
 
 ### 2. Database (Supabase)
 
-See `SUPABASE_SETUP_GUIDE.md`. Fresh database: run `database_setup.sql`,
-then `migrations/001_social_auth.sql`. Existing database: run only the
-migration.
-
-Connection string goes to `.env` (`SUPABASE_DATABASE_URL=...`) or
+The schema already lives in the production Supabase project. Connection
+string goes to `.env` (`SUPABASE_DATABASE_URL=...`) or
 `.streamlit/secrets.toml` (`[supabase] database_url`).
 
-### 3. Login (Google / Facebook)
+### 3. Login (Google)
 
-See `AUTH_SETUP_GUIDE.md` - OAuth clients, secrets layout, admin list and
-the local `dev_user` mode.
+Create an OAuth client in Google Cloud Console (Web application, redirect
+URI `https://<app>.streamlit.app/oauth2callback` and
+`http://localhost:8501/oauth2callback`), then fill the secrets:
+
+```toml
+admin_emails = ["..."]            # admins: remove anyone, draw any time
+
+[auth]
+redirect_uri = "https://<app>.streamlit.app/oauth2callback"
+cookie_secret = "<random hex>"
+
+# "google" handles signups, "wypis" handles signouts - the SAME Google
+# client in both. The provider name stored in the identity cookie carries
+# the intended action across the OAuth redirect; prompt = "select_account"
+# forces the account chooser on every click (players pick which account
+# performs the action).
+[auth.google]
+client_id = "....apps.googleusercontent.com"
+client_secret = "..."
+server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
+client_kwargs = { prompt = "select_account" }
+
+[auth.wypis]
+client_id = "....apps.googleusercontent.com"   # same values as above
+client_secret = "..."
+server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
+client_kwargs = { prompt = "select_account" }
+```
+
+For local development without OAuth, a `[dev_user]` secrets section
+(`enabled`, `email`, `name`) fakes a logged-in user.
 
 ### 4. Scheduler
 

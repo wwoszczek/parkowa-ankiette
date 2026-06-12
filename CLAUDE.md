@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Streamlit web app (Polish-language UI) for organizing weekly pickup football games: player signups (Google/Facebook login via `st.login`), random team drawing and game history. Backed by Supabase PostgreSQL. There are no tests and no linter configured.
+Streamlit web app (Polish-language UI) for organizing weekly pickup football games: player signups (Google login via `st.login`), random team drawing and game history. Backed by Supabase PostgreSQL. There are no tests and no linter configured.
 
 ## Commands
 
@@ -19,7 +19,7 @@ uv export --no-hashes --no-emit-project --no-default-groups -o requirements.txt
 
 `requirements.txt` is a **generated artifact** (exported from `uv.lock`) kept only because Streamlit Community Cloud installs from it — never hand-edit it; change `pyproject.toml` and re-export. The project is non-packaged (`[tool.uv] package = false`); `src` is imported directly. The scheduler needs only the `scheduler` dependency group (no Streamlit).
 
-Database connection requires either `SUPABASE_DATABASE_URL` in `.env` (checked first) or `st.secrets["supabase"]["database_url"]`. Schema setup is manual: `database_setup.sql` + `migrations/*.sql` in the Supabase SQL editor. For local runs against a non-SSL Postgres set `DB_SSLMODE=disable`.
+Database connection requires either `SUPABASE_DATABASE_URL` in `.env` (checked first) or `st.secrets["supabase"]["database_url"]`. The schema lives only in the production Supabase project (no SQL files in the repo — `signups` has `user_email`, `is_guest`, `added_by_email`, legacy nullable `password_hash`, plus a partial unique index on `(game_id, user_email) WHERE is_guest = FALSE`); schema changes are applied manually in the Supabase SQL editor. For local runs against a non-SSL Postgres set `DB_SSLMODE=disable`.
 
 ## Architecture
 
@@ -34,7 +34,9 @@ The scheduler drives a state machine on the `games.active` flag: games are creat
 
 ### Identity & permissions
 
-No passwords. `src/utils/auth.py` wraps Streamlit native OIDC (`st.login`/`st.user`) with providers read from `[auth.google]`/`[auth.facebook]` secret sections — login buttons appear only for configured providers. A `[dev_user]` secrets section fakes a logged-in user for local development. Admins are e-mails listed in the root-level `admin_emails` secret; they can remove any signup and (re)draw teams outside the time window. **Guests**: signed-in users add named entries (`is_guest=TRUE`, `added_by_email`); removal is allowed for the adder and admins only. Legacy password-era rows have `user_email IS NULL` and can only be removed by admins. See `AUTH_SETUP_GUIDE.md`.
+No passwords. `src/utils/auth.py` wraps Streamlit native OIDC (`st.login`/`st.user`) with providers read from `[auth.<provider>]` secret sections — login buttons appear only for configured providers. Google is deliberately the only provider (Facebook needs business verification for public login; GitHub/Discord aren't OIDC; Apple is paid) — don't add others without checking those constraints. A `[dev_user]` secrets section fakes a logged-in user for local development. Admins are e-mails listed in the root-level `admin_emails` secret; they can remove any signup and (re)draw teams outside the time window. **Guests**: signed-in users add named entries (`is_guest=TRUE`, `added_by_email`); removal is allowed for the adder and admins only. Legacy password-era rows have `user_email IS NULL` and can only be removed by admins. Google OAuth setup (consent screen, redirect URIs, secrets layout) is documented in README.md.
+
+**The Google session is deliberately invisible** — the signup panel shows only two always-visible buttons ("Zapisz się kontem Google" / "Wypisz się kontem Google", keys `gbtn_*`); there is no "Zalogowano jako" strip and no logout outside the admin expander. **Every real click goes through the Google account chooser** (`prompt = "select_account"` in `client_kwargs`), so players pick which account performs the action — switching accounts needs no logout. Intent is carried across the OAuth redirect by the **provider name**: two secret sections point at the same Google client — `[auth.google]` (signup) and `[auth.wypis]` (signout) — and Streamlit stores the provider in the identity cookie, so `st.user.provider` tells which button started the flow. `claim_fresh_login()` (src/utils/auth.py) returns the action exactly once, only for a seconds-old login (`iat` claim < 45 s) and dedupes via a server-side `st.cache_resource` set — a days-old cookie or page reload never replays an action. Session state does NOT survive the OAuth redirect; never rely on it across `st.login`. Only the `dev_user` fake acts directly without the chooser. Feedback messages name the account ("Jesteś już zapisany… (konto: e-mail)", "Nie jesteś zapisany… (konto: e-mail)"). No nickname input; the display name comes from the account (`_base_nickname`: full name → e-mail local part → "Gracz"), deduplicated with a numeric suffix (`Wojtek 2`).
 
 ### Page navigation
 
@@ -42,11 +44,11 @@ No passwords. `src/utils/auth.py` wraps Streamlit native OIDC (`st.login`/`st.us
 
 ### UI layer
 
-`src/ui/styles.py` injects the global stylesheet (Manrope font, `pk-*` component classes); `src/ui/components.py` renders presentational HTML (hero card, players table, team cards, stat chips, empty states) — always `html.escape` user content there. Buttons are styled per-widget via `st-key-<key>` CSS classes (e.g. keys starting with `remove` get the destructive red style, `login_google`/`login_facebook` get branded styles). Avoid emoji; use `:material/...:` icons.
+`src/ui/styles.py` injects the global stylesheet (Manrope font, `pk-*` component classes); `src/ui/components.py` renders presentational HTML (hero card, players table, team cards, stat chips, empty states) — always `html.escape` user content there. Buttons are styled per-widget via `st-key-<key>` CSS classes (e.g. keys starting with `remove` get the destructive red style, `login_google` gets the branded Google style). Avoid emoji; use `:material/...:` icons.
 
 ### Database layer
 
-`src/database.py` defines `SupabaseDB`: raw psycopg2 with a new connection opened and closed per query (no pooling — Supabase free-tier friendly). `execute_query` returns a list of dicts for SELECTs and a rowcount otherwise. Tables: `games`, `signups`, `teams`. The `teams.players` column is a TEXT JSON string; `src/utils/teams_db.py:get_teams_for_game` normalizes legacy formats when reading. `database_setup.sql` installs DB-side triggers (nickname validation, 50-signup cap), so some validation lives in the database, not just in `src/utils/validation.py`.
+`src/database.py` defines `SupabaseDB`: raw psycopg2 with a new connection opened and closed per query (no pooling — Supabase free-tier friendly). `execute_query` returns a list of dicts for SELECTs and a rowcount otherwise. Tables: `games`, `signups`, `teams`. The `teams.players` column is a TEXT JSON string; `src/utils/teams_db.py:get_teams_for_game` normalizes legacy formats when reading. The production database has DB-side triggers installed historically (nickname validation, 50-signup cap), so some validation lives in the database, not just in `src/utils/validation.py`.
 
 ### Conventions
 
