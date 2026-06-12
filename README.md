@@ -17,10 +17,12 @@ drawing and game history. Polish UI, Supabase PostgreSQL, free-tier friendly.
   - **12 / 14 players** → 2 teams (czerwona, czarna)
   - **18 players** → 3 teams (biała, czerwona, czarna)
 - Drawing opens at a configured time window; admins can (re)draw any time
+- Optional **shirt-colour pins**: before drawing, fix specific players to a team colour (for people who only own one colour); the rest are shuffled into remaining slots
 - Other counts → manual draw message
 
 ### History
 - Archive of past games: pick a game, see players and drawn teams instantly
+- Stat chips show player count and number of teams drawn
 
 ### Automatic game management
 - **GitHub Actions scheduler** (`.github/workflows/scheduler.yml`) creates the
@@ -34,7 +36,7 @@ drawing and game history. Polish UI, Supabase PostgreSQL, free-tier friendly.
 | `/zapisy` | signup form + live player list |
 | `/sklady` | drawn teams + draw controls |
 | `/historia` | past games archive |
-| `/statystyki` | most active players, by season |
+| `/statystyki` | most active players by season — podium + full ranking |
 
 ## Setup
 
@@ -109,5 +111,5 @@ All times live in `game_consts.yaml` (Python weekday: 0=Monday):
 game:   { day: 2, hour: 18, minute: 30 }  # Wednesday 18:30
 signup: { day: 6, hour: 10, minute: 0 }   # opens Sunday 10:00
 draw:   { day: 2, hour: 8,  minute: 0 }   # draw from Wednesday 8:00
-guests: { max_per_user: 2 }
+guests: { max_per_user: 5 }
 ```

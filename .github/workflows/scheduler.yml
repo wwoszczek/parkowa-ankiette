@@ -2,8 +2,9 @@ name: 🤖 Automatyczny Scheduler Gierek
 
 on:
   schedule:
-    # UTC +0:00 - keep in mind
-    - cron: '0 9,14,19 * * *'
+    # UTC +0:00 - keep in mind. 08:00 + 09:00 UTC bracket the Sunday 10:00
+    # Warsaw signup opening across DST (summer = 08:00 UTC, winter = 09:00 UTC).
+    - cron: '0 8,9,14,19 * * *'
 
   workflow_dispatch:
     inputs:
