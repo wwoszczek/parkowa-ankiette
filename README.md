@@ -25,7 +25,7 @@ drawing and game history. Polish UI, Supabase PostgreSQL, free-tier friendly.
 ### Automatic game management
 - **GitHub Actions scheduler** (`.github/workflows/scheduler.yml`) creates the
   next game, opens signups and closes past games - no server needed
-  (`uv run --only-group scheduler python github_scheduler.py`)
+  (installs only `psycopg2-binary PyYAML pytz`, then runs `github_scheduler.py`)
 
 ## Pages
 
@@ -39,20 +39,14 @@ drawing and game history. Polish UI, Supabase PostgreSQL, free-tier friendly.
 
 ### 1. Install & run
 
-The project is managed with [uv](https://docs.astral.sh/uv/):
-
 ```bash
-uv run streamlit run app.py     # syncs deps from uv.lock, then runs
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+streamlit run app.py
 ```
 
-`requirements.txt` is generated from the lockfile (`uv export`) and kept only
-for Streamlit Community Cloud, which installs from it. After changing
-dependencies in `pyproject.toml`, refresh both:
-
-```bash
-uv lock
-uv export --no-hashes --no-emit-project --no-default-groups -o requirements.txt
-```
+`requirements.txt` holds the direct dependencies; Streamlit Community Cloud
+installs from it.
 
 ### 2. Database (Supabase)
 

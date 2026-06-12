@@ -8,16 +8,16 @@ Streamlit web app (Polish-language UI) for organizing weekly pickup football gam
 
 ## Commands
 
-Managed with **uv** (`pyproject.toml` + `uv.lock`):
+Plain pip + `requirements.txt` (this is what Streamlit Community Cloud installs from):
 
 ```bash
-uv run streamlit run app.py                                  # run the app locally
-uv run --only-group scheduler python github_scheduler.py     # run scheduler (needs SUPABASE_DATABASE_URL)
-uv lock                                                       # after editing deps
-uv export --no-hashes --no-emit-project --no-default-groups -o requirements.txt
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+streamlit run app.py                       # run the app locally
+python github_scheduler.py                 # run scheduler (needs SUPABASE_DATABASE_URL)
 ```
 
-`requirements.txt` is a **generated artifact** (exported from `uv.lock`) kept only because Streamlit Community Cloud installs from it — never hand-edit it; change `pyproject.toml` and re-export. The project is non-packaged (`[tool.uv] package = false`); `src` is imported directly. The scheduler needs only the `scheduler` dependency group (no Streamlit).
+`requirements.txt` is hand-maintained with the **direct** dependencies only. `src` is imported directly (the app runs via `streamlit run app.py`, not as an installed package). The GitHub Actions scheduler installs just its subset (`psycopg2-binary PyYAML pytz`, no Streamlit).
 
 Database connection requires either `SUPABASE_DATABASE_URL` in `.env` (checked first) or `st.secrets["supabase"]["database_url"]`. The schema lives only in the production Supabase project (no SQL files in the repo — `signups` has `user_email`, `is_guest`, `added_by_email`, legacy nullable `password_hash`, plus a partial unique index on `(game_id, user_email) WHERE is_guest = FALSE`); schema changes are applied manually in the Supabase SQL editor. For local runs against a non-SSL Postgres set `DB_SSLMODE=disable`.
 
