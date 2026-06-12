@@ -4,8 +4,10 @@ version = "0.1.0"
 description = "Streamlit app for organizing weekly pickup football games"
 requires-python = ">=3.9"
 dependencies = [
-    "streamlit>=1.47.0",
-    "Authlib>=1.3.2",
+    # st.login needs the [auth] extra (Authlib) plus httpx for the
+    # Authlib/starlette OAuth client on Streamlit's uvicorn server
+    "streamlit[auth]>=1.47.0",
+    "httpx>=0.27",
     "psycopg2-binary>=2.9.7",
     "python-dotenv>=1.0.0",
     "pytz>=2023.3",

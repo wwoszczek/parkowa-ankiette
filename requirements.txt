@@ -4,8 +4,11 @@ altair==5.5.0 ; python_full_version < '3.10'
     # via streamlit
 altair==6.2.1 ; python_full_version >= '3.10'
     # via streamlit
+anyio==4.12.1 ; python_full_version < '3.10'
+    # via httpx
 anyio==4.13.0 ; python_full_version >= '3.10'
     # via
+    #   httpx
     #   starlette
     #   streamlit
 attrs==26.1.0
@@ -13,9 +16,9 @@ attrs==26.1.0
     #   jsonschema
     #   referencing
 authlib==1.6.12 ; python_full_version < '3.10'
-    # via parkowa-ankiette
+    # via streamlit
 authlib==1.7.2 ; python_full_version >= '3.10'
-    # via parkowa-ankiette
+    # via streamlit
 blinker==1.9.0
     # via streamlit
 cachetools==6.2.6 ; python_full_version < '3.10'
@@ -23,7 +26,10 @@ cachetools==6.2.6 ; python_full_version < '3.10'
 cachetools==7.1.4 ; python_full_version >= '3.10'
     # via streamlit
 certifi==2026.5.20
-    # via requests
+    # via
+    #   httpcore
+    #   httpx
+    #   requests
 cffi==2.0.0 ; platform_python_implementation != 'PyPy'
     # via cryptography
 charset-normalizer==3.4.7
@@ -42,19 +48,26 @@ cryptography==48.0.1 ; python_full_version > '3.9'
     # via
     #   authlib
     #   joserfc
-exceptiongroup==1.3.1 ; python_full_version == '3.10.*'
+exceptiongroup==1.3.1 ; python_full_version < '3.11'
     # via anyio
 gitdb==4.0.12
     # via gitpython
 gitpython==3.1.50
     # via streamlit
-h11==0.16.0 ; python_full_version >= '3.10'
-    # via uvicorn
+h11==0.16.0
+    # via
+    #   httpcore
+    #   uvicorn
+httpcore==1.0.9
+    # via httpx
 httptools==0.8.0 ; python_full_version >= '3.10'
     # via streamlit
+httpx==0.28.1
+    # via parkowa-ankiette
 idna==3.18
     # via
     #   anyio
+    #   httpx
     #   requests
 itsdangerous==2.2.0 ; python_full_version >= '3.10'
     # via streamlit
