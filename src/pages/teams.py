@@ -22,10 +22,10 @@ from src.utils.teams_db import get_teams_for_game, save_teams
 
 def _draw_controls(db, game, signups, teams_exist, user, admin):
     n = len(signups)
-    st.caption(f"Na liście: {ui.pl_players(n)}.")
+    st.caption(f"Na liście: {ui.pl_players(n)}")
 
     if not user:
-        st.caption("Zaloguj się na stronie Zapisy, aby móc wylosować składy.")
+        st.caption("Zaloguj się na stronie Zapisy, aby móc wylosować składy")
         return
     if not (is_draw_time_allowed() or admin):
         st.caption(DRAW_OPENING_MESSAGE)
@@ -34,7 +34,7 @@ def _draw_controls(db, game, signups, teams_exist, user, admin):
         counts = ", ".join(str(c) for c in ALLOWED_PLAYER_COUNTS)
         st.warning(
             f"{MANUAL_DRAW_MESSAGE}\n\n"
-            f"Automatyczne losowanie działa dla {counts} graczy."
+            f"Automatyczne losowanie działa dla {counts} graczy"
         )
         return
 
@@ -51,7 +51,7 @@ def teams_page():
     if not db:
         return
 
-    ui.page_header("Składy", "Wylosowane drużyny na najbliższą gierkę.")
+    ui.page_header("Składy", "Wylosowane drużyny na najbliższą gierkę")
 
     games = get_active_games(db)
     if not games:
