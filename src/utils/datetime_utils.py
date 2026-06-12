@@ -84,3 +84,36 @@ def relative_day_label(dt):
     if days == 1:
         return "jutro"
     return f"za {days} dni"
+
+
+# Meteorological seasons: wiosna (Mar-May), lato (Jun-Aug),
+# jesień (Sep-Nov), zima (Dec-Feb).
+_SEASON_BY_MONTH = {
+    3: ("wiosna", 3), 4: ("wiosna", 3), 5: ("wiosna", 3),
+    6: ("lato", 6), 7: ("lato", 6), 8: ("lato", 6),
+    9: ("jesień", 9), 10: ("jesień", 9), 11: ("jesień", 9),
+    12: ("zima", 12), 1: ("zima", 12), 2: ("zima", 12),
+}
+
+
+def season_bounds(dt):
+    """The meteorological season containing dt, as a dict with key, name,
+    label and the [start, end) bounds (timezone-aware)."""
+    name, start_month = _SEASON_BY_MONTH[dt.month]
+    # Winter starts in December, so Jan/Feb belong to the previous year's winter.
+    start_year = dt.year - 1 if start_month == 12 and dt.month in (1, 2) else dt.year
+
+    start = TIMEZONE.localize(datetime(start_year, start_month, 1))
+    end_month, end_year = start_month + 3, start_year
+    if end_month > 12:
+        end_month -= 12
+        end_year += 1
+    end = TIMEZONE.localize(datetime(end_year, end_month, 1))
+
+    if name == "zima":
+        label = f"Zima {start_year}/{str(start_year + 1)[2:]}"
+    else:
+        label = f"{name.capitalize()} {start_year}"
+
+    return {"key": f"{start_year}-{start_month:02d}", "name": name,
+            "label": label, "start": start, "end": end}

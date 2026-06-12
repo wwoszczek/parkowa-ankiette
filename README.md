@@ -34,6 +34,7 @@ drawing and game history. Polish UI, Supabase PostgreSQL, free-tier friendly.
 | `/zapisy` | signup form + live player list |
 | `/sklady` | drawn teams + draw controls |
 | `/historia` | past games archive |
+| `/statystyki` | most active players, by season |
 
 ## Setup
 

@@ -9,6 +9,7 @@ from src.ui.styles import inject_styles
 from src.pages.signup import signup_page
 from src.pages.teams import teams_page
 from src.pages.history import history_page
+from src.pages.stats import stats_page
 
 
 def main():
@@ -21,6 +22,7 @@ def main():
             st.Page(signup_page, title="Zapisy", icon=":material/how_to_reg:", default=True),
             st.Page(teams_page, title="Składy", icon=":material/diversity_3:", url_path="sklady"),
             st.Page(history_page, title="Historia", icon=":material/history:", url_path="historia"),
+            st.Page(stats_page, title="Statystyki", icon=":material/leaderboard:", url_path="statystyki"),
         ],
         position="top",
     )

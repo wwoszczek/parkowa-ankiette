@@ -40,7 +40,7 @@ No passwords. `src/utils/auth.py` wraps Streamlit native OIDC (`st.login`/`st.us
 
 ### Page navigation
 
-`app.py` uses `st.navigation`/`st.Page` with top-position nav; pages are plain zero-arg functions in `src/pages/` (signup, teams, history) with own URL paths (`/zapisy`, `/sklady`, `/historia`). Each page fetches the cached DB handle itself via `init_database()`.
+`app.py` uses `st.navigation`/`st.Page` with top-position nav; pages are plain zero-arg functions in `src/pages/` (signup, teams, history, stats) with own URL paths (`/` , `/sklady`, `/historia`, `/statystyki`). Each page fetches the cached DB handle itself via `init_database()`. Stats use meteorological seasons (`season_bounds` in datetime_utils) and count attendance in already-played games (`src/utils/stats_utils.py`).
 
 ### UI layer
 

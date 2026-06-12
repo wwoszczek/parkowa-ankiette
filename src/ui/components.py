@@ -175,3 +175,54 @@ def team_cards(teams: dict):
 
 def account_strip(name: str):
     _render(f'<div class="pk-account">Zalogowano jako <b>{escape(name)}</b></div>')
+
+
+def _pl_games(n: int) -> str:
+    if n == 1:
+        return "1 gierka"
+    if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
+        return f"{n} gierki"
+    return f"{n} gierek"
+
+
+def podium(top):
+    """top: up to 3 dicts {name, count, is_guest}, rendered 2nd-1st-3rd."""
+    if not top:
+        return
+    order = [1, 0, 2]  # visual columns: silver, gold, bronze
+    cells = []
+    for pos in order:
+        if pos >= len(top):
+            cells.append('<div class="pk-pod pk-pod-empty"></div>')
+            continue
+        p = top[pos]
+        place = pos + 1
+        guest = '<span class="pk-badge pk-badge-guest">gość</span>' if p.get("is_guest") else ""
+        cells.append(
+            f'<div class="pk-pod pk-pod-{place}">'
+            f'<div class="pk-pod-medal">{place}</div>'
+            f'<div class="pk-pod-name">{escape(p["name"])}{guest}</div>'
+            f'<div class="pk-pod-count">{_pl_games(p["count"])}</div>'
+            f'<div class="pk-pod-bar"></div>'
+            "</div>"
+        )
+    _render(f'<div class="pk-podium">{"".join(cells)}</div>')
+
+
+def ranking_list(rows, start_rank: int, max_count: int):
+    """Ranked rows {name, count, is_guest} with a bar proportional to max_count."""
+    items = []
+    for i, p in enumerate(rows, start=start_rank):
+        pct = round(100 * p["count"] / max_count) if max_count else 0
+        guest = '<span class="pk-badge pk-badge-guest">gość</span>' if p.get("is_guest") else ""
+        items.append(
+            '<div class="pk-rank">'
+            f'<div class="pk-rank-no">{i}</div>'
+            '<div class="pk-rank-main">'
+            f'<div class="pk-rank-name">{escape(p["name"])}{guest}</div>'
+            f'<div class="pk-rank-track"><div class="pk-rank-fill" style="width:{pct}%"></div></div>'
+            "</div>"
+            f'<div class="pk-rank-count">{p["count"]}</div>'
+            "</div>"
+        )
+    _render(f'<div class="pk-card pk-ranking">{"".join(items)}</div>')

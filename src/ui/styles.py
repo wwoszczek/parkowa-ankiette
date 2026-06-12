@@ -228,6 +228,42 @@ footer { visibility: hidden; }
 /* Account strip on the signup page */
 .pk-account { color: #51604F; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.4rem; }
 .pk-account b { color: #15301F; }
+
+/* Stats: podium */
+.pk-podium {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.7rem;
+    align-items: end; margin: 0.3rem 0 1.1rem;
+}
+.pk-pod {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    background: #FFFFFF; border: 1px solid #E6E9E1; border-radius: 16px;
+    padding: 0.9rem 0.5rem 0; overflow: hidden;
+}
+.pk-pod-empty { background: transparent; border: none; }
+.pk-pod-medal {
+    width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center;
+    font-weight: 800; color: #FFFFFF; margin-bottom: 0.4rem;
+}
+.pk-pod-name { font-weight: 800; color: #15301F; line-height: 1.15; }
+.pk-pod-count { font-size: 0.82rem; font-weight: 600; color: #7A8578; margin: 0.15rem 0 0.6rem; }
+.pk-pod-bar { width: 100%; border-radius: 6px 6px 0 0; }
+.pk-pod-1 .pk-pod-medal { background: #E0A100; }
+.pk-pod-1 .pk-pod-bar { height: 56px; background: linear-gradient(180deg, #F6CD55, #E0A100); }
+.pk-pod-2 .pk-pod-medal { background: #9AA0A6; }
+.pk-pod-2 .pk-pod-bar { height: 38px; background: linear-gradient(180deg, #C2C7CC, #9AA0A6); }
+.pk-pod-3 .pk-pod-medal { background: #B07B45; }
+.pk-pod-3 .pk-pod-bar { height: 26px; background: linear-gradient(180deg, #D2A06C, #B07B45); }
+
+/* Stats: ranking list */
+.pk-ranking { padding: 0.4rem 0.9rem; }
+.pk-rank { display: flex; align-items: center; gap: 0.7rem; padding: 0.5rem 0; border-bottom: 1px solid #F0F2EB; }
+.pk-rank:last-child { border-bottom: none; }
+.pk-rank-no { width: 1.6rem; text-align: center; font-weight: 800; color: #9AA597; flex: 0 0 auto; }
+.pk-rank-main { flex: 1 1 auto; min-width: 0; }
+.pk-rank-name { font-weight: 700; color: #22302A; margin-bottom: 0.25rem; }
+.pk-rank-track { height: 6px; background: #EEF1E9; border-radius: 999px; overflow: hidden; }
+.pk-rank-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #2E9C5E, #1E7A46); }
+.pk-rank-count { font-weight: 800; color: #15301F; flex: 0 0 auto; font-variant-numeric: tabular-nums; }
 </style>
 """
 
