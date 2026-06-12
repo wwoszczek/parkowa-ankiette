@@ -34,7 +34,10 @@ def history_page():
     signups = get_signups_for_game(db, game["id"])
     teams = get_teams_for_game(db, game["id"])
 
-    ui.stat_chips([(len(signups), "zapisanych")])
+    ui.stat_chips([
+        (len(signups), "zapisanych"),
+        (len(teams) if teams else "—", "drużyny"),
+    ])
 
     if teams:
         ui.section("Składy")
