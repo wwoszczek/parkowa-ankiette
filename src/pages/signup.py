@@ -7,16 +7,26 @@ import streamlit as st
 from src.config import init_database
 from src.game_config import MAX_GUESTS_PER_USER, SIGNUP_OPENING_MESSAGE
 from src.ui import components as ui
-from src.utils.auth import get_current_user, is_admin, login_panel, logout_control
+from src.utils.auth import (
+    auth_ready,
+    claim_fresh_login,
+    get_current_user,
+    is_admin,
+    is_dev_user,
+    logout_control,
+    start_action_login,
+)
 from src.utils.datetime_utils import format_game_date, get_next_game_time, parse_game_time
 from src.utils.game_utils import get_active_games
 from src.utils.signup_utils import (
+    account_display_name,
     add_account_signup,
     add_guest_signup,
     get_account_signup,
     get_guests_added_by,
     get_signups_for_game,
     remove_signup,
+    resolve_adder_names,
 )
 
 
@@ -41,26 +51,60 @@ def _show_flash():
         (st.success if kind == "ok" else st.error)(message)
 
 
-def _account_panel(db, game, user):
-    ui.account_strip(user["name"])
-    my_entry = get_account_signup(db, game["id"], user["email"])
-    if my_entry:
-        st.success(f"Jesteś na liście jako **{my_entry['nickname']}**.")
-        if st.button("Wypisz się", key="remove_self", width="stretch"):
-            ok, msg = remove_signup(db, my_entry["id"], user["email"])
-            _finish(ok, msg)
-    else:
-        with st.form("signup_form"):
-            default_nick = user["name"].split()[0] if user.get("name") else ""
-            nickname = st.text_input("Twój nick na liście", value=default_nick, max_chars=20)
-            if st.form_submit_button("Zapisz się", type="primary", width="stretch"):
-                ok, msg = add_account_signup(db, game["id"], nickname, user["email"])
-                _finish(ok, msg)
-    logout_control()
+def _perform(db, game, user, action):
+    """Run the requested account action, returning (ok, message)."""
+    if action == "signup":
+        return add_account_signup(db, game["id"], user["email"], user["name"])
+    # action == "signout"
+    entry = get_account_signup(db, game["id"], user["email"])
+    if not entry:
+        return False, f"Nie jesteś obecnie zapisany na tę gierkę (konto: {user['email']})"
+    return remove_signup(db, entry["id"], user["email"])
+
+
+def _act(db, game, user, action):
+    """Every real click goes through the Google account chooser, so the player
+    picks WHICH account performs the action (switching accounts just works).
+    Only the dev_user fake acts directly - it has no OAuth flow."""
+    if is_dev_user():
+        _finish(*_perform(db, game, user, action))
+        return
+    start_action_login(action)
+
+
+def _complete_oauth_action(db, game, user):
+    """Finish the action that triggered the account chooser. The provider name
+    stored in the identity cookie ("google" = signup, "wypis" = signout)
+    carries the intent across the redirect; claim_fresh_login() returns it
+    exactly once and only for a seconds-old login, so a days-old cookie or a
+    page reload never replays an action."""
+    action = claim_fresh_login()
+    if action:
+        _finish(*_perform(db, game, user, action))
+
+
+def _signup_panel(db, game, user):
+    """Just two always-visible buttons - the Google session stays invisible.
+    Each action gives explicit feedback (already signed up / not signed up)."""
+    if not is_dev_user() and not auth_ready():
+        st.info(
+            "Zapisy wymagają logowania Google, które nie jest jeszcze w pełni "
+            "skonfigurowane (sekcje [auth.google] i [auth.wypis] w secrets — patrz README)"
+        )
+        return
+
+    if st.button("Zapisz się kontem Google", key="gbtn_signup", width="stretch"):
+        _act(db, game, user, "signup")
+    if st.button("Wypisz się kontem Google", key="gbtn_signout", width="stretch"):
+        _act(db, game, user, "signout")
 
 
 def _guests_panel(db, game, user):
     ui.section("Twoi goście")
+    # Same name the list uses for this account (dedup-aware), so the "gość · X"
+    # badge and this note always agree - even when not currently signed up.
+    adder = account_display_name(db, game["id"], user["email"], user["name"])
+    st.caption(f"Goście zostaną przypisani do konta **{adder}** ({user['email']})")
     guests = get_guests_added_by(db, game["id"], user["email"])
 
     for guest in guests:
@@ -81,15 +125,15 @@ def _guests_panel(db, game, user):
                 ok, msg = add_guest_signup(db, game["id"], guest_name, user["email"])
                 _finish(ok, msg)
         st.caption(f"Goście nie potrzebują konta — wypisać może ich tylko ten, kto ich dodał. "
-                   f"Limit: {MAX_GUESTS_PER_USER} na osobę.")
+                   f"Limit: {MAX_GUESTS_PER_USER} na osobę")
     else:
-        st.caption(f"Wykorzystany limit gości ({MAX_GUESTS_PER_USER}).")
+        st.caption(f"Wykorzystany limit gości ({MAX_GUESTS_PER_USER})")
 
 
 def _admin_panel(db, game, signups, user):
     with st.expander("Zarządzanie listą (admin)"):
         if not signups:
-            st.caption("Lista jest pusta.")
+            st.caption("Lista jest pusta")
         for entry in signups:
             label = entry["nickname"] + (" · gość" if entry.get("is_guest") else "")
             name_col, btn_col = st.columns([4, 1])
@@ -97,6 +141,8 @@ def _admin_panel(db, game, signups, user):
             if btn_col.button("Usuń", key=f"remove_admin_{entry['id']}", width="stretch"):
                 ok, msg = remove_signup(db, entry["id"], user["email"], admin=True)
                 _finish(ok, msg)
+        # The session is invisible elsewhere by design; admins get the escape hatch.
+        logout_control()
 
 
 def signup_page():
@@ -104,7 +150,7 @@ def signup_page():
     if not db:
         return
 
-    ui.page_header("Zapisy", "Dołącz do najbliższej gierki i zobacz, kto gra.")
+    ui.brand_header("Dołącz do najbliższej gierki i zobacz, kto gra")
 
     games = get_active_games(db)
     if not games:
@@ -125,15 +171,22 @@ def signup_page():
 
     with list_col:
         ui.section("Lista graczy")
-        ui.players_table(signups, current_email=email)
+        adder_names = resolve_adder_names(db, signups)
+        if user:
+            # The current viewer's own guests use the same dedup-aware name as
+            # the guests panel, even if the viewer is not signed up.
+            adder_names[user["email"].lower()] = account_display_name(
+                db, game["id"], user["email"], user["name"]
+            )
+        ui.players_table(signups, current_email=email, adder_names=adder_names)
 
     with panel_col:
         ui.section("Twój zapis")
+        if user:
+            _complete_oauth_action(db, game, user)
         _show_flash()
-        if not user:
-            login_panel()
-        else:
-            _account_panel(db, game, user)
+        _signup_panel(db, game, user)
+        if user:
             _guests_panel(db, game, user)
 
     if user and is_admin(user):

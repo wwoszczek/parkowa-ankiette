@@ -21,7 +21,7 @@ draw:
 # ===== GUESTS =====
 # Signed-in users can add this many guests (friends without an account).
 guests:
-  max_per_user: 2
+  max_per_user: 5
 
 # ===== TEAMS CONFIGURATION =====
 # Configuration for automatic team drawing for different player counts

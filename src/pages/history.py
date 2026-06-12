@@ -8,7 +8,7 @@ from src.config import init_database
 from src.ui import components as ui
 from src.utils.datetime_utils import format_game_date, parse_game_time
 from src.utils.game_utils import get_past_games
-from src.utils.signup_utils import get_signups_for_game
+from src.utils.signup_utils import get_signups_for_game, resolve_adder_names
 from src.utils.teams_db import get_teams_for_game
 
 
@@ -17,13 +17,13 @@ def history_page():
     if not db:
         return
 
-    ui.page_header("Historia", "Archiwum rozegranych gierek.")
+    ui.page_header("Historia", "Archiwum rozegranych gierek")
 
     past_games = get_past_games(db)
     if not past_games:
         ui.empty_state(
             "Brak gierek w historii",
-            "Pierwsza rozegrana gierka pojawi się tutaj automatycznie.",
+            "Pierwsza rozegrana gierka pojawi się tutaj automatycznie",
         )
         return
 
@@ -34,14 +34,11 @@ def history_page():
     signups = get_signups_for_game(db, game["id"])
     teams = get_teams_for_game(db, game["id"])
 
-    ui.stat_chips([
-        (len(signups), "zapisanych"),
-        (len(teams) if teams else "—", "drużyny"),
-    ])
+    ui.stat_chips([(len(signups), "zapisanych")])
 
     if teams:
         ui.section("Składy")
         ui.team_cards({t["team_color"]: t["players"] for t in teams})
 
     ui.section("Lista zapisanych")
-    ui.players_table(signups)
+    ui.players_table(signups, adder_names=resolve_adder_names(db, signups))

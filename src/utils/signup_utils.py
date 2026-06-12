@@ -43,12 +43,89 @@ def get_guests_added_by(db: SupabaseDB, game_id: str, email: str):
     ) or []
 
 
+def account_display_name(db: SupabaseDB, game_id: str, email: str, account_name: str) -> str:
+    """The name this account uses on the game's list: its signup nickname when
+    signed up, otherwise the name it WOULD get (dedup-aware preview), so the
+    guests panel and the list stay consistent even before/after signing up."""
+    entry = get_account_signup(db, game_id, email)
+    if entry:
+        return entry["nickname"]
+    return _unique_nickname(db, game_id, _base_nickname(account_name, email))
+
+
+def resolve_adder_names(db: SupabaseDB, signups: list) -> dict:
+    """Map added_by_email (lowercased) -> display label for every guest's adder,
+    so the list can always show who added a guest - even when that account is
+    not itself on this game's list. Falls back across games, then to the e-mail
+    local part."""
+    guest_emails = {
+        s["added_by_email"].lower()
+        for s in signups
+        if s.get("is_guest") and s.get("added_by_email")
+    }
+    if not guest_emails:
+        return {}
+
+    names = {}
+    # 1) adder is signed up in THIS game -> their current nickname
+    for s in signups:
+        if not s.get("is_guest") and s.get("user_email"):
+            email = s["user_email"].lower()
+            if email in guest_emails:
+                names[email] = s["nickname"]
+
+    # 2) otherwise -> most recent nickname the adder used in any game
+    missing = [e for e in guest_emails if e not in names]
+    if missing:
+        try:
+            rows = db.execute_query(
+                "SELECT DISTINCT ON (LOWER(user_email)) LOWER(user_email) AS email, nickname "
+                "FROM signups WHERE is_guest = FALSE AND user_email IS NOT NULL "
+                "AND LOWER(user_email) = ANY(%s) "
+                "ORDER BY LOWER(user_email), timestamp DESC",
+                (missing,)
+            ) or []
+            for row in rows:
+                names[row["email"]] = row["nickname"]
+        except Exception:
+            pass
+
+    # 3) still unknown -> e-mail local part
+    for email in guest_emails:
+        names.setdefault(email, email.split("@")[0])
+
+    return names
+
+
 def _nickname_taken(db: SupabaseDB, game_id: str, nickname: str) -> bool:
     rows = db.execute_query(
         "SELECT 1 FROM signups WHERE game_id = %s AND nickname = %s",
         (game_id, nickname)
     )
     return bool(rows)
+
+
+def _base_nickname(name: str, email: str) -> str:
+    """Display name derived from the account: full name, e-mail local part
+    as fallback, 'Gracz' as the last resort."""
+    base = sanitize_input(name or "")[:20].strip()
+    if validate_player_name(base)[0]:
+        return base
+    local = (email or "").split("@")[0].replace(".", " ").replace("_", " ").replace("-", " ")
+    base = sanitize_input(local)[:20].strip()
+    if validate_player_name(base)[0]:
+        return base
+    return "Gracz"
+
+
+def _unique_nickname(db: SupabaseDB, game_id: str, base: str) -> str:
+    """Appends ' 2', ' 3', ... when the name is already on the list."""
+    candidate, n = base, 2
+    while _nickname_taken(db, game_id, candidate):
+        suffix = f" {n}"
+        candidate = base[:20 - len(suffix)].rstrip() + suffix
+        n += 1
+    return candidate
 
 
 def _insert_signup(db: SupabaseDB, game_id: str, nickname: str,
@@ -64,21 +141,16 @@ def _insert_signup(db: SupabaseDB, game_id: str, nickname: str,
     )
 
 
-def add_account_signup(db: SupabaseDB, game_id: str, nickname: str, email: str):
-    """Signs up the logged-in user under the given display name."""
+def add_account_signup(db: SupabaseDB, game_id: str, email: str, name: str):
+    """Signs up the logged-in user under their account name (deduplicated
+    with a numeric suffix when two players share the name)."""
     try:
-        nickname = sanitize_input(nickname)
-        valid, error = validate_player_name(nickname)
-        if not valid:
-            return False, error
-
         if get_account_signup(db, game_id, email):
-            return False, "Jesteś już na liście!"
-        if _nickname_taken(db, game_id, nickname):
-            return False, "Ten nick jest już zajęty w tej gierce — wybierz inny."
+            return False, f"Jesteś już zapisany na tę gierkę (konto: {email})"
 
+        nickname = _unique_nickname(db, game_id, _base_nickname(name, email))
         _insert_signup(db, game_id, nickname, user_email=email)
-        return True, "Jesteś na liście!"
+        return True, f"Jesteś na liście jako {nickname}!"
     except Exception as e:
         return False, f"Błąd podczas zapisu: {str(e)[:120]}"
 
@@ -92,9 +164,9 @@ def add_guest_signup(db: SupabaseDB, game_id: str, guest_name: str, added_by_ema
             return False, error
 
         if len(get_guests_added_by(db, game_id, added_by_email)) >= MAX_GUESTS_PER_USER:
-            return False, f"Możesz dodać maksymalnie {MAX_GUESTS_PER_USER} gości."
+            return False, f"Możesz dodać maksymalnie {MAX_GUESTS_PER_USER} gości"
         if _nickname_taken(db, game_id, guest_name):
-            return False, "Gracz o tym imieniu/nicku już jest na liście."
+            return False, "Gracz o tym imieniu/nicku już jest na liście"
 
         _insert_signup(db, game_id, guest_name, is_guest=True, added_by_email=added_by_email)
         return True, f"Dodano gościa: {guest_name}"
@@ -110,7 +182,7 @@ def remove_signup(db: SupabaseDB, signup_id: str, requester_email: str, admin: b
     try:
         rows = db.execute_query("SELECT * FROM signups WHERE id = %s", (signup_id,))
         if not rows:
-            return False, "Nie znaleziono zapisu."
+            return False, "Nie znaleziono zapisu"
         entry = rows[0]
 
         requester = (requester_email or "").lower()
@@ -123,7 +195,7 @@ def remove_signup(db: SupabaseDB, signup_id: str, requester_email: str, admin: b
             )
         )
         if not allowed:
-            return False, "Możesz wypisać tylko siebie i swoich gości."
+            return False, "Możesz wypisać tylko siebie i swoich gości"
 
         db.execute_query("DELETE FROM signups WHERE id = %s", (signup_id,))
         return True, f"Wypisano: {entry['nickname']}"
