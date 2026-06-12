@@ -6,23 +6,43 @@ import random
 from src.game_config import TEAM_CONFIGS, ALLOWED_PLAYER_COUNTS
 
 
-def draw_teams(players: list, num_players: int):
-    """Draws team lineups based on configuration"""
+def draw_teams(players: list, num_players: int, pins: dict | None = None):
+    """Draws team lineups based on configuration.
+
+    `pins` optionally fixes players to a shirt colour (for people who only have
+    one colour available): {color: [players]}. Pinned players are placed in
+    their colour first, the rest are shuffled into the remaining slots.
+    Returns None if the count is invalid or the pins don't fit.
+    """
     if num_players not in ALLOWED_PLAYER_COUNTS:
         return None
-    
+
     config = TEAM_CONFIGS[num_players]
-    random.shuffle(players)
-    
-    teams = {}
-    start_idx = 0
-    
-    for i, color in enumerate(config["colors"]):
-        players_count = config["players_per_team"][i]
-        end_idx = start_idx + players_count
-        teams[color] = players[start_idx:end_idx]
-        start_idx = end_idx
-    
+    colors = config["colors"]
+    caps = config["players_per_team"]
+    pins = pins or {}
+
+    # Validate pins: known colours, within capacity, each player once, on the list.
+    pinned = []
+    for i, color in enumerate(colors):
+        chosen = pins.get(color, [])
+        if len(chosen) > caps[i]:
+            return None
+        pinned.extend(chosen)
+    if len(pinned) != len(set(pinned)):
+        return None
+    if not set(pinned).issubset(set(players)):
+        return None
+
+    teams = {color: list(pins.get(color, [])) for color in colors}
+    rest = [p for p in players if p not in set(pinned)]
+    random.shuffle(rest)
+
+    for i, color in enumerate(colors):
+        need = caps[i] - len(teams[color])
+        teams[color].extend(rest[:need])
+        rest = rest[need:]
+
     return teams
 
 
