@@ -2,35 +2,44 @@
 Functions for handling teams in the database
 """
 
+import logging
 import streamlit as st
 import uuid
 import json
 import ast
 from src.database import SupabaseDB
 
+logger = logging.getLogger(__name__)
+
 
 def save_teams(db: SupabaseDB, game_id: str, teams: dict):
-    """Saves team lineups to database"""
+    """Saves team lineups to database. Runs as a single transaction so the
+    previous lineups are replaced atomically (no partial state on failure)."""
+    connection = None
     try:
-        # Remove previous lineups for this game
-        db.execute_query("DELETE FROM teams WHERE game_id = %s", (game_id,))
-
-        # Add new lineups
-        for color, players in teams.items():
-            team_id = str(uuid.uuid4())
-            db.execute_query(
+        connection = db.get_connection()
+        with connection.cursor() as cur:
+            # Remove previous lineups for this game
+            cur.execute("DELETE FROM teams WHERE game_id = %s", (game_id,))
+            # Add new lineups (players stored as a JSON string)
+            cur.executemany(
                 "INSERT INTO teams (id, game_id, team_color, players) VALUES (%s, %s, %s, %s)",
-                (
-                    team_id,
-                    game_id,
-                    color,
-                    json.dumps(players),
-                ),  # Store players as JSON string
+                [
+                    (str(uuid.uuid4()), game_id, color, json.dumps(players))
+                    for color, players in teams.items()
+                ],
             )
+        connection.commit()
         return True
-    except Exception as e:
-        st.error(f"Błąd podczas zapisywania składów: {e}")
+    except Exception:
+        if connection and not connection.closed:
+            connection.rollback()
+        logger.exception("Failed to save teams")
+        st.error("Błąd podczas zapisywania składów")
         return False
+    finally:
+        if connection and not connection.closed:
+            connection.close()
 
 
 def get_teams_for_game(db: SupabaseDB, game_id: str):
@@ -96,6 +105,6 @@ def get_teams_for_game(db: SupabaseDB, game_id: str):
             team["players"] = normalize_players(players_value)
 
         return teams_data
-    except Exception as e:
-        st.error(f"Błąd podczas pobierania składów: {e}")
+    except Exception:
+        st.error("Błąd podczas pobierania składów")
         return []

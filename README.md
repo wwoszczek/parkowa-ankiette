@@ -1,89 +1,115 @@
-# 🏆 Parkowa - Weekly Football Games
+# Parkowa - Weekly Football Games
 
-Application for organizing weekly football games with automatic signup management, team composition drawing, and game history.
+Streamlit app for organizing weekly pickup football: signups, random team
+drawing and game history. Polish UI, Supabase PostgreSQL, free-tier friendly.
 
-## ⚡ Features
+## Features
 
-### 👥 Signup System
-- Players sign up by providing **nickname** and **password**
-- Passwords are securely hashed (bcrypt)
-- Visible signup order
-- Ability to unregister only with correct password
+### Signups
+- Login with **Google** (Streamlit native `st.login`, no passwords)
+- One-click signup under an editable display name
+- **Guests**: a signed-in user can add friends without an account
+  (configurable limit per user); only the adder or an admin can remove them
+- Self sign-out at any time; admins can remove any entry
 
-### 🎲 Team Drawing
-- Automatic team division:
-  - **12 or 14 people** → 2 teams (red, black)
-  - **18 people** → 3 teams (white, red, black)
-  - Other numbers → message about need for manual drawing
-- Ability to redraw teams
+### Team drawing
+- Automatic split based on player count (configured in `game_consts.yaml`):
+  - **12 / 14 players** → 2 teams (czerwona, czarna)
+  - **18 players** → 3 teams (biała, czerwona, czarna)
+- Drawing opens at a configured time window; admins can (re)draw any time
+- Optional **shirt-colour pins**: before drawing, fix specific players to a team colour (for people who only own one colour); the rest are shuffled into remaining slots
+- Other counts → manual draw message
 
-### 💰 Payments (for treasurer)
-- **Password protected**
-- **Quick debtor overview** - summary of who owes how much
-- **Payment management** - marking who paid for historical games
+### History
+- Archive of past games: pick a game, see players and drawn teams instantly
+- Stat chips show player count and number of teams drawn
 
-### 📚 Game History
-- Full history of all games
-- List of registered participants
-- Team compositions after drawing
+### Automatic game management
+- **GitHub Actions scheduler** (`.github/workflows/scheduler.yml`) creates the
+  next game, opens signups and closes past games - no server needed
+  (installs only `psycopg2-binary PyYAML pytz`, then runs `github_scheduler.py`)
 
-### 🗓️ Automatic Game Management
-- **GitHub Actions Scheduler** ensures that the game list and their activity status are up to date
+## Pages
 
-## 🚀 Installation and Setup
+| URL | Page |
+|---|---|
+| `/` | signup form + live player list |
+| `/teams` | drawn teams + draw controls |
+| `/history` | past games archive |
+| `/stats` | most active players by season — podium + full ranking |
 
-### Requirements
-- Python 3.8+
-- PostgreSQL database
+## Setup
 
-📋 **Quick setup:**
-1. Add secret in GitHub repo: `SUPABASE_DATABASE_URL`
-2. Workflow is ready in `.github/workflows/scheduler.yml`
-3. **Done!** - scheduler works automatically
+### 1. Install & run
 
-### 1. Clone repository
 ```bash
-git clone https://github.com/wwoszczek/parkowa-ankiette.git
-cd parkowa-ankiette
-```
-
-### 2. Install dependencies
-```bash
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-### 3. Database configuration
-
-
-### 4. Run application
-```bash
 streamlit run app.py
 ```
 
-### ⏰ Time Parameters
-All time settings can be easily changed in the `game_consts.yaml` file:
+`requirements.txt` holds the direct dependencies; Streamlit Community Cloud
+installs from it.
 
-```yaml
-# Games take place on Wednesdays at 18:30
-game:
-  day: 2      # 2 = Wednesday
-  hour: 18
-  minute: 30
+### 2. Database (Supabase)
 
-# Signups open on Mondays at 10:00
-signup:
-  day: 0      # 0 = Monday
-  hour: 10
-  minute: 0
+The schema already lives in the production Supabase project. Connection
+string goes to `.env` (`SUPABASE_DATABASE_URL=...`) or
+`.streamlit/secrets.toml` (`[supabase] database_url`).
 
-# Drawing possible on Wednesdays from 15:00
-draw:
-  day: 2      # 2 = Wednesday
-  hour: 15
-  minute: 0
+### 3. Login (Google)
+
+Create an OAuth client in Google Cloud Console (Web application, redirect
+URI `https://<app>.streamlit.app/oauth2callback` and
+`http://localhost:8501/oauth2callback`), then fill the secrets:
+
+```toml
+admin_emails = ["..."]            # admins: remove anyone, draw any time
+
+[auth]
+redirect_uri = "https://<app>.streamlit.app/oauth2callback"
+cookie_secret = "<random hex>"
+
+# "google" handles signups, "signout" handles signouts - the SAME Google
+# client in both. The provider name stored in the identity cookie carries
+# the intended action across the OAuth redirect; prompt = "select_account"
+# forces the account chooser on every click (players pick which account
+# performs the action).
+[auth.google]
+client_id = "....apps.googleusercontent.com"
+client_secret = "..."
+server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
+client_kwargs = { prompt = "select_account" }
+
+[auth.signout]
+client_id = "....apps.googleusercontent.com"   # same values as above
+client_secret = "..."
+server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
+client_kwargs = { prompt = "select_account" }
 ```
 
-### Game Schedule
-- **Game day**: Wednesday 18:30
-- **Signups open**: Sunday 10:00
-- **Drawing**: Wednesday from 8:00
+For local development without OAuth, a `[dev_user]` secrets section
+(`enabled`, `email`, `name`) fakes a logged-in user.
+
+### 4. Scheduler
+
+Add the `SUPABASE_DATABASE_URL` secret in the GitHub repo - the workflow in
+`.github/workflows/scheduler.yml` does the rest.
+
+## Database structure
+
+- `games` - `id`, `start_time`, `active`
+- `signups` - `id`, `game_id`, `nickname`, `user_email`, `is_guest`,
+  `added_by_email`, `timestamp` (`password_hash` kept for legacy rows)
+- `teams` - `id`, `game_id`, `team_color`, `players` (JSON)
+
+## Schedule configuration
+
+All times live in `game_consts.yaml` (Python weekday: 0=Monday):
+
+```yaml
+game:   { day: 2, hour: 18, minute: 30 }  # Wednesday 18:30
+signup: { day: 6, hour: 10, minute: 0 }   # opens Sunday 10:00
+draw:   { day: 2, hour: 8,  minute: 0 }   # draw from Wednesday 8:00
+guests: { max_per_user: 5 }
+```

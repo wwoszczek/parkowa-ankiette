@@ -1,17 +1,12 @@
-name: 🤖 Automatyczny Scheduler Gierek
+name: Game scheduler
 
 on:
   schedule:
-    # UTC +0:00 - keep in mind
-    - cron: '0 9,14,19 * * *'
+    # UTC +0:00 - keep in mind. 08:00 + 09:00 UTC bracket the Sunday 10:00
+    # Warsaw signup opening across DST (summer = 08:00 UTC, winter = 09:00 UTC).
+    - cron: '0 8,9,14,19 * * *'
 
   workflow_dispatch:
-    inputs:
-      force_run:
-        description: 'Wymuszenie pełnego sprawdzenia'
-        required: false
-        default: 'false'
-        type: boolean
 
 env:
   SUPABASE_DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
@@ -20,42 +15,38 @@ jobs:
   scheduler:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    
+
     steps:
-    - name: 📥 Checkout repository
+    - name: Checkout repository
       uses: actions/checkout@v4
-    
-    - name: 🐍 Setup Python
-      uses: actions/setup-python@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
+        python-version: '3.11'
         cache: 'pip'
-    
-    - name: 📦 Install dependencies
+
+    - name: Install dependencies
       run: |
-        pip install --upgrade pip
-        # Install only the dependencies needed for the scheduler (no Streamlit)
-        pip install psycopg2-binary pyyaml pytz
-    
-    - name: 🚀 Run scheduler
+        python -m pip install --upgrade pip
+        # Only the scheduler's deps (no Streamlit)
+        pip install psycopg2-binary PyYAML pytz
+
+    - name: Run scheduler
       run: |
-        echo "🤖 Run games scheduler..."
+        echo "Running games scheduler..."
         python github_scheduler.py
-      env:
-        FORCE_RUN: ${{ github.event.inputs.force_run }}
-    
-    - name: 📊 Upload logs as artifacts (on failure)
+
+    - name: Upload logs as artifacts (on failure)
       if: failure()
       uses: actions/upload-artifact@v4
       with:
         name: scheduler-logs
-        path: |
-          *.log
-          /tmp/scheduler-*.log
+        path: /tmp/scheduler.log
         retention-days: 7
-    
-    - name: 💬 Notify on failure (optional)
+
+    - name: Notify on failure (optional)
       if: failure()
       run: |
-        echo "❌ Scheduler failed at $(date)"
+        echo "Scheduler failed at $(date)"
         # Here you can add notifications to Slack/Discord/email
