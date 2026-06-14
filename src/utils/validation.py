@@ -3,17 +3,17 @@ Input validation and sanitization for player names.
 """
 
 _ALLOWED_CHARS = set(
-    'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -_'
-    'ąćęłńóśźżĄĆĘŁŃÓŚŹŻ'
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -_"
+    "ąćęłńóśźżĄĆĘŁŃÓŚŹŻ"
 )
-_FORBIDDEN_NAMES = {'admin', 'test', 'null', 'undefined', 'system'}
+_FORBIDDEN_NAMES = {"admin", "test", "null", "undefined", "system"}
 
 
 def sanitize_input(text: str) -> str:
     """Trims and collapses whitespace."""
     if not text:
         return ""
-    return ' '.join(text.split())
+    return " ".join(text.split())
 
 
 def validate_player_name(name: str) -> tuple[bool, str]:
@@ -24,16 +24,16 @@ def validate_player_name(name: str) -> tuple[bool, str]:
         (is_valid, error_message)
     """
     if not name:
-        return False, "Imię/nick nie może być puste"
+        return False, "Imię nie może być puste"
 
     if len(name) < 2:
-        return False, "Imię/nick musi mieć co najmniej 2 znaki"
+        return False, "Imię musi mieć co najmniej 2 znaki"
 
     if len(name) > 20:
-        return False, "Imię/nick nie może być dłuższy niż 20 znaków"
+        return False, "Imię nie może być dłuższe niż 20 znaków"
 
     if not all(char in _ALLOWED_CHARS for char in name):
-        return False, "Imię/nick zawiera niedozwolone znaki"
+        return False, "Imię zawiera niedozwolone znaki"
 
     if name.lower() in _FORBIDDEN_NAMES:
         return False, "Ta nazwa jest zarezerwowana"
