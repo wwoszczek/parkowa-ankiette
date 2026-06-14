@@ -16,7 +16,11 @@ from src.utils.auth import (
     logout_control,
     start_action_login,
 )
-from src.utils.datetime_utils import format_game_date, get_next_game_time, parse_game_time
+from src.utils.datetime_utils import (
+    format_game_date,
+    get_next_game_time,
+    parse_game_time,
+)
 from src.utils.game_utils import get_active_games
 from src.utils.signup_utils import (
     account_display_name,
@@ -34,7 +38,9 @@ def _select_game(games):
     if len(games) == 1:
         return games[0]
     labels = [format_game_date(parse_game_time(g["start_time"])) for g in games]
-    idx = st.selectbox("Wybierz gierkę", range(len(games)), format_func=lambda i: labels[i])
+    idx = st.selectbox(
+        "Wybierz gierkę", range(len(games)), format_func=lambda i: labels[i]
+    )
     return games[idx]
 
 
@@ -58,7 +64,10 @@ def _perform(db, game, user, action):
     # action == "signout"
     entry = get_account_signup(db, game["id"], user["email"])
     if not entry:
-        return False, f"Nie jesteś obecnie zapisany na tę gierkę (konto: {user['email']})"
+        return (
+            False,
+            f"Nie jesteś obecnie zapisany na tę gierkę (konto: {user['email']})",
+        )
     return remove_signup(db, entry["id"], user["email"])
 
 
@@ -74,7 +83,7 @@ def _act(db, game, user, action):
 
 def _complete_oauth_action(db, game, user):
     """Finish the action that triggered the account chooser. The provider name
-    stored in the identity cookie ("google" = signup, "wypis" = signout)
+    stored in the identity cookie ("google" = signup, "signout" = signout)
     carries the intent across the redirect; claim_fresh_login() returns it
     exactly once and only for a seconds-old login, so a days-old cookie or a
     page reload never replays an action."""
@@ -89,7 +98,7 @@ def _signup_panel(db, game, user):
     if not is_dev_user() and not auth_ready():
         st.info(
             "Zapisy wymagają logowania Google, które nie jest jeszcze w pełni "
-            "skonfigurowane (sekcje [auth.google] i [auth.wypis] w secrets — patrz README)"
+            "skonfigurowane (sekcje [auth.google] i [auth.signout] w secrets — patrz README)"
         )
         return
 
@@ -118,14 +127,17 @@ def _guests_panel(db, game, user):
     if remaining > 0:
         with st.form("guest_form", clear_on_submit=True):
             guest_name = st.text_input(
-                "Imię/nick gościa", max_chars=20,
-                placeholder="np. Maciek (kolega bez konta)",
+                "Imię gościa",
+                max_chars=20,
+                placeholder="np. Maciek",
             )
             if st.form_submit_button("Dodaj gościa", width="stretch"):
                 ok, msg = add_guest_signup(db, game["id"], guest_name, user["email"])
                 _finish(ok, msg)
-        st.caption(f"Goście nie potrzebują konta — wypisać może ich tylko ten, kto ich dodał. "
-                   f"Limit: {MAX_GUESTS_PER_USER} na osobę")
+        st.caption(
+            f"Goście nie potrzebują konta. Wypisać może ich tylko ten, kto ich dodał. "
+            f"Limit: {MAX_GUESTS_PER_USER} na osobę"
+        )
     else:
         st.caption(f"Wykorzystany limit gości ({MAX_GUESTS_PER_USER})")
 
@@ -138,7 +150,9 @@ def _admin_panel(db, game, signups, user):
             label = entry["nickname"] + (" · gość" if entry.get("is_guest") else "")
             name_col, btn_col = st.columns([4, 1])
             name_col.markdown(label)
-            if btn_col.button("Usuń", key=f"remove_admin_{entry['id']}", width="stretch"):
+            if btn_col.button(
+                "Usuń", key=f"remove_admin_{entry['id']}", width="stretch"
+            ):
                 ok, msg = remove_signup(db, entry["id"], user["email"], admin=True)
                 _finish(ok, msg)
         # The session is invisible elsewhere by design; admins get the escape hatch.
@@ -167,7 +181,18 @@ def signup_page():
 
     ui.hero(game_dt, chips=[ui.pl_players(len(signups))])
 
-    list_col, panel_col = st.columns([5, 4], gap="large")
+    # Signup panel first (left on desktop, on top when columns stack on mobile),
+    # player list second (right on desktop, below on mobile).
+    panel_col, list_col = st.columns([4, 5], gap="large")
+
+    with panel_col:
+        ui.section("Twój zapis")
+        if user:
+            _complete_oauth_action(db, game, user)
+        _show_flash()
+        _signup_panel(db, game, user)
+        if user:
+            _guests_panel(db, game, user)
 
     with list_col:
         ui.section("Lista graczy")
@@ -179,15 +204,6 @@ def signup_page():
                 db, game["id"], user["email"], user["name"]
             )
         ui.players_table(signups, current_email=email, adder_names=adder_names)
-
-    with panel_col:
-        ui.section("Twój zapis")
-        if user:
-            _complete_oauth_action(db, game, user)
-        _show_flash()
-        _signup_panel(db, game, user)
-        if user:
-            _guests_panel(db, game, user)
 
     if user and is_admin(user):
         _admin_panel(db, game, signups, user)

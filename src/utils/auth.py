@@ -5,13 +5,13 @@ Secrets layout (Google OAuth setup is documented in README.md):
     admin_emails = ["..."]          # root level, optional
     [auth]            redirect_uri, cookie_secret
     [auth.google]     Google client + client_kwargs.prompt = "select_account"
-    [auth.wypis]      SAME Google client - distinct provider name, see below
+    [auth.signout]    SAME Google client - distinct provider name, see below
     [dev_user]        enabled, email, name   # local development only
 
 Why two provider sections for one Google client: session state does not
 survive the OAuth redirect, but Streamlit stores the *provider name* in the
 identity cookie. Signing up logs in via provider "google", signing out via
-provider "wypis" - after the redirect `st.user.provider` tells us exactly
+provider "signout" - after the redirect `st.user.provider` tells us exactly
 which button started the flow, so the intended action completes reliably.
 """
 
@@ -20,7 +20,7 @@ import time
 import streamlit as st
 
 # action -> provider section used for its login flow
-ACTION_PROVIDERS = {"signup": "google", "signout": "wypis"}
+ACTION_PROVIDERS = {"signup": "google", "signout": "signout"}
 
 
 def auth_configured() -> bool:

@@ -13,8 +13,9 @@ def init_database():
         # Test connection
         db.execute_query("SELECT 1")
         return db
-    except Exception as e:
-        st.error(f"Błąd połączenia z bazą danych: {e}")
+    except Exception:
+        # Details are already logged by the database layer.
+        st.error("Błąd połączenia z bazą danych")
         return None
 
 def setup_page_config():

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-GitHub Actions Scheduler - independent from Streamlit UI
-Runs automatically every hour via GitHub Actions
+GitHub Actions scheduler - independent from the Streamlit UI.
+Runs on a fixed cron schedule via GitHub Actions (.github/workflows/scheduler.yml).
 """
 
 import os
@@ -43,7 +43,7 @@ def load_scheduler_config():
                 'SIGNUP_OPEN_MINUTE': config['signup']['minute']
             }
     except Exception as e:
-        logger.error(f"Błąd wczytywania konfiguracji: {e}")
+        logger.error(f"Failed to load configuration: {e}")
         sys.exit(1)
 
 # Load config
@@ -95,7 +95,7 @@ def get_signup_opening_time(game_time):
 
 def activate_games_for_signup(connection) -> int:
     """Activate games when their signup period should open"""
-    logger.info("🔍 Sprawdzanie gierek do aktywacji...")
+    logger.info("Checking for games to activate...")
     now = datetime.now(TIMEZONE)
     
     try:
@@ -114,18 +114,18 @@ def activate_games_for_signup(connection) -> int:
                     "UPDATE games SET active = TRUE WHERE id = %s",
                     (game['id'],)
                 )
-                logger.info(f"🟢 Aktywowano gierkę z {game_time.strftime('%d.%m.%Y %H:%M')} (zapisy otwarte od {signup_open_time.strftime('%d.%m.%Y %H:%M')})")
+                logger.info(f"Activated game on {game_time.strftime('%d.%m.%Y %H:%M')} (signups open since {signup_open_time.strftime('%d.%m.%Y %H:%M')})")
                 activated_count += 1
             elif now >= signup_open_time and game_time <= now:
-                logger.info(f"⏭️  Pominięto aktywację gierki z {game_time.strftime('%d.%m.%Y %H:%M')} - gierka już się odbyła")
+                logger.info(f"Skipped activating game on {game_time.strftime('%d.%m.%Y %H:%M')} - it already took place")
         
         if activated_count == 0:
-            logger.info("✅ Brak gierek do aktywacji")
+            logger.info("No games to activate")
         
         return activated_count
         
     except Exception as e:
-        logger.error(f"❌ Błąd aktywacji gierek: {e}")
+        logger.error(f"Failed to activate games: {e}")
         raise
 
 
@@ -134,9 +134,9 @@ def get_database_connection():
     database_url = os.getenv('SUPABASE_DATABASE_URL')
     
     if not database_url:
-        raise ValueError("❌ Brak zmiennej SUPABASE_DATABASE_URL w GitHub Secrets")
-    
-    logger.info("✅ Łączenie z Supabase PostgreSQL...")
+        raise ValueError("Missing SUPABASE_DATABASE_URL environment variable (GitHub Secrets)")
+
+    logger.info("Connecting to Supabase PostgreSQL...")
     return psycopg2.connect(database_url, cursor_factory=RealDictCursor, sslmode='require')
 
 
@@ -152,7 +152,7 @@ def execute_query(connection, query: str, params=None):
 
 def deactivate_past_games(connection) -> int:
     """Deactivate past games"""
-    logger.info("🔍 Sprawdzanie przeszłych gierek do dezaktywacji...")
+    logger.info("Checking for past games to deactivate...")
     now = datetime.now(TIMEZONE)
     
     try:
@@ -170,22 +170,22 @@ def deactivate_past_games(connection) -> int:
                     "UPDATE games SET active = FALSE WHERE id = %s",
                     (game['id'],)
                 )
-                logger.info(f"🔴 Dezaktywowano gierkę z {game_time.strftime('%d.%m.%Y %H:%M')}")
+                logger.info(f"Deactivated game from {game_time.strftime('%d.%m.%Y %H:%M')}")
                 deactivated_count += 1
         
         if deactivated_count == 0:
-            logger.info("✅ Brak przeszłych gierek do dezaktywacji")
+            logger.info("No past games to deactivate")
         
         return deactivated_count
         
     except Exception as e:
-        logger.error(f"❌ Błąd dezaktywacji gierek: {e}")
+        logger.error(f"Failed to deactivate games: {e}")
         raise
 
 
 def create_upcoming_games(connection) -> int:
     """Create games for next week"""
-    logger.info("🏗️ Sprawdzanie czy potrzeba utworzyć nowe gierki...")
+    logger.info("Checking whether new games need to be created...")
     
     created_count = 0
     
@@ -195,12 +195,12 @@ def create_upcoming_games(connection) -> int:
                 created_count += 1
         
         if created_count == 0:
-            logger.info("✅ Wszystkie gierki na kolejny 1 tydzień już istnieją")
+            logger.info("All games for the upcoming week already exist")
 
         return created_count
         
     except Exception as e:
-        logger.error(f"❌ Błąd tworzenia gierek: {e}")
+        logger.error(f"Failed to create games: {e}")
         raise
 
 
@@ -225,11 +225,11 @@ def create_game_for_week(connection, weeks_ahead: int) -> bool:
             (new_game_id, game_time.isoformat(), False)
         )
         
-        logger.info(f"🆕 Utworzono nową gierkę na {game_time.strftime('%d.%m.%Y %H:%M')} (nieaktywna)")
+        logger.info(f"Created new game for {game_time.strftime('%d.%m.%Y %H:%M')} (inactive)")
         return True
         
     except Exception as e:
-        logger.error(f"❌ Błąd tworzenia gierki: {e}")
+        logger.error(f"Failed to create game: {e}")
         return False
 
 
@@ -260,7 +260,7 @@ def get_scheduler_stats(connection) -> dict:
         }
         
     except Exception as e:
-        logger.error(f"❌ Błąd pobierania statystyk: {e}")
+        logger.error(f"Failed to fetch stats: {e}")
         return {
             'active_games_count': 0,
             'total_signups': 0,
@@ -271,7 +271,7 @@ def get_scheduler_stats(connection) -> dict:
 def main():
     """Main scheduler function"""
     logger.info("=" * 50)
-    logger.info("🤖 SCHEDULER STARTED")
+    logger.info("SCHEDULER STARTED")
     logger.info("=" * 50)
     
     try:
@@ -280,7 +280,7 @@ def main():
         
         # Initial statistics
         initial_stats = get_scheduler_stats(connection)
-        logger.info(f"📊 Stan początkowy: {initial_stats['active_games_count']} aktywnych gierek, {initial_stats['total_signups']} zapisów")
+        logger.info(f"Initial state: {initial_stats['active_games_count']} active games, {initial_stats['total_signups']} signups")
         
         # Deactivate past games
         deactivated = deactivate_past_games(connection)
@@ -296,21 +296,21 @@ def main():
         
         # Summary
         logger.info("=" * 50)
-        logger.info("📈 PODSUMOWANIE:")
-        logger.info(f"   🔴 Dezaktywowano: {deactivated} gierek")
-        logger.info(f"   🟢 Aktywowano: {activated} gierek")
-        logger.info(f"   🆕 Utworzono: {created} nowych gierek")
-        logger.info(f"   📊 Stan końcowy: {final_stats['active_games_count']} aktywnych gierek")
-        logger.info(f"   👥 Łącznie zapisów: {final_stats['total_signups']}")
-        logger.info(f"   🎯 Wszystkich gierek: {final_stats['total_games_count']}")
-        logger.info("✅ SCHEDULER COMPLETED SUCCESSFULLY")
+        logger.info("SUMMARY:")
+        logger.info(f"   Deactivated: {deactivated} games")
+        logger.info(f"   Activated: {activated} games")
+        logger.info(f"   Created: {created} new games")
+        logger.info(f"   Final state: {final_stats['active_games_count']} active games")
+        logger.info(f"   Total signups: {final_stats['total_signups']}")
+        logger.info(f"   Total games: {final_stats['total_games_count']}")
+        logger.info("SCHEDULER COMPLETED SUCCESSFULLY")
         logger.info("=" * 50)
         
         connection.close()
         
     except Exception as e:
-        logger.error(f"💥 CRITICAL ERROR: {e}")
-        logger.error("❌ SCHEDULER FAILED")
+        logger.error(f"CRITICAL ERROR: {e}")
+        logger.error("SCHEDULER FAILED")
         logger.info("=" * 50)
         sys.exit(1)
 

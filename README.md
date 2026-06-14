@@ -33,10 +33,10 @@ drawing and game history. Polish UI, Supabase PostgreSQL, free-tier friendly.
 
 | URL | Page |
 |---|---|
-| `/zapisy` | signup form + live player list |
-| `/sklady` | drawn teams + draw controls |
-| `/historia` | past games archive |
-| `/statystyki` | most active players by season — podium + full ranking |
+| `/` | signup form + live player list |
+| `/teams` | drawn teams + draw controls |
+| `/history` | past games archive |
+| `/stats` | most active players by season — podium + full ranking |
 
 ## Setup
 
@@ -70,7 +70,7 @@ admin_emails = ["..."]            # admins: remove anyone, draw any time
 redirect_uri = "https://<app>.streamlit.app/oauth2callback"
 cookie_secret = "<random hex>"
 
-# "google" handles signups, "wypis" handles signouts - the SAME Google
+# "google" handles signups, "signout" handles signouts - the SAME Google
 # client in both. The provider name stored in the identity cookie carries
 # the intended action across the OAuth redirect; prompt = "select_account"
 # forces the account chooser on every click (players pick which account
@@ -81,7 +81,7 @@ client_secret = "..."
 server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
 client_kwargs = { prompt = "select_account" }
 
-[auth.wypis]
+[auth.signout]
 client_id = "....apps.googleusercontent.com"   # same values as above
 client_secret = "..."
 server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"

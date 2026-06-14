@@ -2,6 +2,7 @@
 Player signups: account-based entries and guests added by signed-in users.
 """
 
+import logging
 import uuid
 from datetime import datetime
 
@@ -12,6 +13,8 @@ from src.database import SupabaseDB
 from src.game_config import MAX_GUESTS_PER_USER
 from src.utils.validation import sanitize_input, validate_player_name
 
+logger = logging.getLogger(__name__)
+
 
 def get_signups_for_game(db: SupabaseDB, game_id: str):
     """Gets signups for a given game (oldest first)"""
@@ -20,8 +23,8 @@ def get_signups_for_game(db: SupabaseDB, game_id: str):
             "SELECT * FROM signups WHERE game_id = %s ORDER BY timestamp",
             (game_id,)
         )
-    except Exception as e:
-        st.error(f"Błąd podczas pobierania zapisów: {e}")
+    except Exception:
+        st.error("Błąd podczas pobierania zapisów")
         return []
 
 
@@ -151,8 +154,9 @@ def add_account_signup(db: SupabaseDB, game_id: str, email: str, name: str):
         nickname = _unique_nickname(db, game_id, _base_nickname(name, email))
         _insert_signup(db, game_id, nickname, user_email=email)
         return True, f"Jesteś na liście jako {nickname}!"
-    except Exception as e:
-        return False, f"Błąd podczas zapisu: {str(e)[:120]}"
+    except Exception:
+        logger.exception("Account signup failed")
+        return False, "Błąd podczas zapisu"
 
 
 def add_guest_signup(db: SupabaseDB, game_id: str, guest_name: str, added_by_email: str):
@@ -170,8 +174,9 @@ def add_guest_signup(db: SupabaseDB, game_id: str, guest_name: str, added_by_ema
 
         _insert_signup(db, game_id, guest_name, is_guest=True, added_by_email=added_by_email)
         return True, f"Dodano gościa: {guest_name}"
-    except Exception as e:
-        return False, f"Błąd podczas dodawania gościa: {str(e)[:120]}"
+    except Exception:
+        logger.exception("Guest signup failed")
+        return False, "Błąd podczas dodawania gościa"
 
 
 def remove_signup(db: SupabaseDB, signup_id: str, requester_email: str, admin: bool = False):
@@ -199,5 +204,6 @@ def remove_signup(db: SupabaseDB, signup_id: str, requester_email: str, admin: b
 
         db.execute_query("DELETE FROM signups WHERE id = %s", (signup_id,))
         return True, f"Wypisano: {entry['nickname']}"
-    except Exception as e:
-        return False, f"Błąd podczas wypisywania: {str(e)[:120]}"
+    except Exception:
+        logger.exception("Signup removal failed")
+        return False, "Błąd podczas wypisywania"

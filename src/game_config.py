@@ -14,7 +14,7 @@ def load_config():
         with open(CONFIG_FILE, 'r', encoding='utf-8') as file:
             return yaml.safe_load(file)
     except Exception as e:
-        raise Exception(f"Błąd wczytywania konfiguracji z {CONFIG_FILE}: {e}")
+        raise Exception(f"Failed to load configuration from {CONFIG_FILE}: {e}")
 
 # Load configuration
 _config = load_config()

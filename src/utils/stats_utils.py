@@ -18,8 +18,8 @@ def list_seasons(db: SupabaseDB) -> list:
             "SELECT start_time FROM games WHERE start_time < %s",
             (datetime.now(TIMEZONE),)
         ) or []
-    except Exception as e:
-        st.error(f"Błąd podczas pobierania sezonów: {e}")
+    except Exception:
+        st.error("Błąd podczas pobierania sezonów")
         return []
 
     seasons = {}
@@ -50,8 +50,8 @@ def season_stats(db: SupabaseDB, start, end):
             "WHERE g.start_time >= %s AND g.start_time < %s AND g.start_time < %s",
             (start, end, datetime.now(TIMEZONE))
         ) or []
-    except Exception as e:
-        st.error(f"Błąd podczas liczenia statystyk: {e}")
+    except Exception:
+        st.error("Błąd podczas liczenia statystyk")
         return {"games": 0, "players": 0, "signups": 0}, []
 
     players, games = {}, set()

@@ -13,8 +13,8 @@ def get_active_games(_db: SupabaseDB):
     """Get active games with caching"""
     try:
         return _db.execute_query("SELECT * FROM games WHERE active = TRUE ORDER BY start_time")
-    except Exception as e:
-        st.error(f"Błąd podczas pobierania aktywnych gierek: {e}")
+    except Exception:
+        st.error("Błąd podczas pobierania aktywnych gierek")
         return []
 
 
@@ -27,6 +27,6 @@ def get_past_games(_db: SupabaseDB):
             "SELECT * FROM games WHERE active = FALSE AND start_time < %s ORDER BY start_time DESC",
             (datetime.now(TIMEZONE),)
         )
-    except Exception as e:
-        st.error(f"Błąd podczas pobierania historii gierek: {e}")
+    except Exception:
+        st.error("Błąd podczas pobierania historii gierek")
         return []

@@ -2,6 +2,7 @@
 Supabase PostgreSQL database configuration and connection management
 """
 
+import logging
 import os
 import streamlit as st
 import psycopg2
@@ -11,6 +12,8 @@ from typing import Optional, List, Dict, Any
 
 # Load environment variables
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 class SupabaseDB:
     def __init__(self):
@@ -27,10 +30,13 @@ class SupabaseDB:
             if hasattr(st, 'secrets') and 'supabase' in st.secrets:
                 return st.secrets["supabase"]["database_url"]
                 
-            raise Exception("Brak konfiguracji bazy danych. Ustaw SUPABASE_DATABASE_URL w .env lub skonfiguruj secrets.toml")
-        except Exception as e:
-            st.error(f"Błąd konfiguracji bazy danych: {e}")
-            raise e
+            raise Exception("Missing database configuration. Set SUPABASE_DATABASE_URL in .env or configure secrets.toml")
+        except Exception:
+            # Never echo the exception to the page - a malformed DSN error can
+            # contain the full connection string (including the password).
+            logger.exception("Database configuration error")
+            st.error("Błąd konfiguracji bazy danych")
+            raise
     
     def get_connection(self):
         """Get simple, fast database connection"""
@@ -41,9 +47,10 @@ class SupabaseDB:
                 # 'require' for Supabase; override only for local development
                 sslmode=os.getenv("DB_SSLMODE", "require")
             )
-        except Exception as e:
-            st.error(f"Błąd połączenia z bazą danych: {e}")
-            raise e
+        except Exception:
+            logger.exception("Database connection failed")
+            st.error("Błąd połączenia z bazą danych")
+            raise
     
     def execute_query(self, query: str, params: Optional[tuple] = None) -> Optional[List[Dict[str, Any]]]:
         """Execute query and return results with explicit connection management"""
@@ -62,10 +69,11 @@ class SupabaseDB:
                 # For other queries, commit and return affected rows
                 connection.commit()
                 return cur.rowcount
-                    
-        except Exception as e:
-            st.error(f"Błąd wykonywania zapytania: {e}")
-            raise e
+
+        except Exception:
+            logger.exception("Query execution failed")
+            st.error("Błąd wykonywania zapytania")
+            raise
         finally:
             # ALWAYS close connection explicitly
             if connection and not connection.closed:
@@ -81,9 +89,10 @@ class SupabaseDB:
                 cur.executemany(query, params_list)
                 connection.commit()
                 return cur.rowcount
-        except Exception as e:
-            st.error(f"Błąd wykonywania zapytań wsadowych: {e}")
-            raise e
+        except Exception:
+            logger.exception("Batch query execution failed")
+            st.error("Błąd wykonywania zapytań wsadowych")
+            raise
         finally:
             # ALWAYS close connection explicitly
             if connection and not connection.closed:
