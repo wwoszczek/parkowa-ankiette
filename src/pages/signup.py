@@ -22,6 +22,7 @@ from src.utils.datetime_utils import (
     parse_game_time,
 )
 from src.utils.game_utils import get_active_games
+from src.utils.profile import clear_display_name, get_display_name, set_display_name
 from src.utils.signup_utils import (
     account_display_name,
     add_account_signup,
@@ -106,6 +107,28 @@ def _signup_panel(db, game, user):
         _act(db, game, user, "signup")
     if st.button("Wypisz się kontem Google", key="gbtn_signout", width="stretch"):
         _act(db, game, user, "signout")
+
+
+def _name_control(db, game, user):
+    """Compact popover under the player list to choose a custom display name. The
+    name is persistent (applies to every future game) and acts directly on the
+    account from the current session - no account chooser, since the typed text
+    would not survive an OAuth redirect."""
+    current = account_display_name(db, game["id"], user["email"], user["name"])
+    custom = get_display_name(db, user["email"])
+    with st.popover("Zmień swoją nazwę", icon=":material/edit:", width="stretch"):
+        st.caption(f"Twoja nazwa na liście (konto: {user['email']})")
+        with st.form("name_form"):
+            new_name = st.text_input(
+                "Nazwa",
+                value=current,
+                max_chars=20,
+                placeholder="np. Wojtek",
+            )
+            if st.form_submit_button("Zapisz nazwę", width="stretch"):
+                _finish(*set_display_name(db, user["email"], new_name))
+        if custom and st.button("Przywróć nazwę z Google", key="name_reset", width="stretch"):
+            _finish(*clear_display_name(db, user["email"], user["name"]))
 
 
 def _guests_panel(db, game, user):
@@ -204,6 +227,8 @@ def signup_page():
                 db, game["id"], user["email"], user["name"]
             )
         ui.players_table(signups, current_email=email, adder_names=adder_names)
+        if user:
+            _name_control(db, game, user)
 
     if user and is_admin(user):
         _admin_panel(db, game, signups, user)

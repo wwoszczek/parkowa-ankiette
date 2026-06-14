@@ -11,6 +11,7 @@ import streamlit as st
 from src.constants import TIMEZONE
 from src.database import SupabaseDB
 from src.game_config import MAX_GUESTS_PER_USER
+from src.utils.profile import get_display_name
 from src.utils.validation import sanitize_input, validate_player_name
 
 logger = logging.getLogger(__name__)
@@ -53,7 +54,7 @@ def account_display_name(db: SupabaseDB, game_id: str, email: str, account_name:
     entry = get_account_signup(db, game_id, email)
     if entry:
         return entry["nickname"]
-    return _unique_nickname(db, game_id, _base_nickname(account_name, email))
+    return _unique_nickname(db, game_id, account_base_nickname(db, email, account_name))
 
 
 def resolve_adder_names(db: SupabaseDB, signups: list) -> dict:
@@ -100,11 +101,19 @@ def resolve_adder_names(db: SupabaseDB, signups: list) -> dict:
     return names
 
 
-def _nickname_taken(db: SupabaseDB, game_id: str, nickname: str) -> bool:
-    rows = db.execute_query(
-        "SELECT 1 FROM signups WHERE game_id = %s AND nickname = %s",
-        (game_id, nickname)
-    )
+def _nickname_taken(db: SupabaseDB, game_id: str, nickname: str, exclude_id=None) -> bool:
+    """True when another signup in this game already uses the name. `exclude_id`
+    skips one row, so a player renaming their own entry does not clash with it."""
+    if exclude_id:
+        rows = db.execute_query(
+            "SELECT 1 FROM signups WHERE game_id = %s AND nickname = %s AND id <> %s",
+            (game_id, nickname, exclude_id)
+        )
+    else:
+        rows = db.execute_query(
+            "SELECT 1 FROM signups WHERE game_id = %s AND nickname = %s",
+            (game_id, nickname)
+        )
     return bool(rows)
 
 
@@ -121,14 +130,24 @@ def _base_nickname(name: str, email: str) -> str:
     return "Gracz"
 
 
-def _unique_nickname(db: SupabaseDB, game_id: str, base: str) -> str:
-    """Appends ' 2', ' 3', ... when the name is already on the list."""
+def _unique_nickname(db: SupabaseDB, game_id: str, base: str, exclude_id=None) -> str:
+    """Appends ' 2', ' 3', ... when the name is already on the list. `exclude_id`
+    skips one row, so renaming a player's own entry never collides with itself."""
     candidate, n = base, 2
-    while _nickname_taken(db, game_id, candidate):
+    while _nickname_taken(db, game_id, candidate, exclude_id):
         suffix = f" {n}"
         candidate = base[:20 - len(suffix)].rstrip() + suffix
         n += 1
     return candidate
+
+
+def account_base_nickname(db: SupabaseDB, email: str, account_name: str) -> str:
+    """The base name for an account before per-game dedup: the player's own
+    chosen display name when set, otherwise derived from the Google account."""
+    custom = get_display_name(db, email)
+    if custom:
+        return custom
+    return _base_nickname(account_name, email)
 
 
 def _insert_signup(db: SupabaseDB, game_id: str, nickname: str,
@@ -151,7 +170,7 @@ def add_account_signup(db: SupabaseDB, game_id: str, email: str, name: str):
         if get_account_signup(db, game_id, email):
             return False, f"Jesteś już zapisany na tę gierkę (konto: {email})"
 
-        nickname = _unique_nickname(db, game_id, _base_nickname(name, email))
+        nickname = _unique_nickname(db, game_id, account_base_nickname(db, email, name))
         _insert_signup(db, game_id, nickname, user_email=email)
         return True, f"Jesteś na liście jako {nickname}!"
     except Exception:

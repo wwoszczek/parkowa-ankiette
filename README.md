@@ -102,6 +102,8 @@ Add the `SUPABASE_DATABASE_URL` secret in the GitHub repo - the workflow in
 - `signups` - `id`, `game_id`, `nickname`, `user_email`, `is_guest`,
   `added_by_email`, `timestamp` (`password_hash` kept for legacy rows)
 - `teams` - `id`, `game_id`, `team_color`, `players` (JSON)
+- `user_profiles` - `user_email` (PK), `display_name`, `updated_at` - a player's
+  optional custom display name (defaults to the Google account name otherwise)
 
 ## Schedule configuration
 
