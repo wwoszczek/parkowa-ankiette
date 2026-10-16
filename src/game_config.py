@@ -3,6 +3,7 @@ Application time configuration - loaded from YAML file
 """
 
 import yaml
+from datetime import date
 from pathlib import Path
 
 # Path to configuration file
@@ -23,6 +24,11 @@ _config = load_config()
 GAME_DAY = _config['game']['day']
 GAME_START_HOUR = _config['game']['hour']
 GAME_START_MINUTE = _config['game']['minute']
+# [(from_date, hour, minute)] sorted by date; YAML parses ISO dates to date objects
+GAME_TIME_CHANGES = sorted(
+    (date.fromisoformat(str(change['from'])), change['hour'], change['minute'])
+    for change in _config['game'].get('time_changes') or []
+)
 
 # ===== SIGNUP OPENING =====
 SIGNUP_OPEN_DAY = _config['signup']['day']
