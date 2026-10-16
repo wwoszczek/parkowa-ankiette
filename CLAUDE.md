@@ -52,7 +52,7 @@ No passwords. `src/utils/auth.py` wraps Streamlit native OIDC (`st.login`/`st.us
 
 ### Conventions
 
-- All datetime logic uses `Europe/Warsaw` (`src/constants.py:TIMEZONE`); weekday numbering follows Python `weekday()` (0=Monday). The GitHub Actions cron is in UTC — keep the offset in mind when editing it.
+- All datetime logic uses `Europe/Warsaw` (`src/constants.py:TIMEZONE`); weekday numbering follows Python `weekday()` (0=Monday). Build wall-clock datetimes with `TIMEZONE.localize(...)` (see `game_start_on`), never `now + timedelta(...)` then `.replace(hour=...)` — pytz keeps the old UTC offset, which shifts times by an hour across a DST switch. The game start time can change per season via dated `game.time_changes` entries in `game_consts.yaml`. The GitHub Actions cron is in UTC — keep the offset in mind when editing it.
 - UI strings are Polish (note `day_names` vs `day_names_accusative` in `game_consts.yaml` for "w środę"-style phrases); code, comments and docstrings are English.
 - Game lists are cached with `st.cache_data` (60s/300s TTL); signups are always fetched fresh. After mutations pages set a `flash` session-state message and `st.rerun()`.
 - Team drawing (`src/utils/team_utils.py:draw_teams`) accepts an optional `pins` dict `{color: [players]}` to fix specific players to a shirt colour before the random shuffle — for players who only own one kit colour. The `/teams` page exposes this via a collapsible expander before the draw button.

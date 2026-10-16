@@ -5,25 +5,34 @@ Helper functions for date and time handling
 from datetime import datetime, timedelta
 from src.constants import TIMEZONE
 from src.game_config import (
-    GAME_DAY, GAME_START_HOUR, GAME_START_MINUTE,
+    GAME_DAY, GAME_START_HOUR, GAME_START_MINUTE, GAME_TIME_CHANGES,
     SIGNUP_OPEN_DAY, SIGNUP_OPEN_HOUR, SIGNUP_OPEN_MINUTE,
     DRAW_ALLOWED_DAY, DRAW_ALLOWED_HOUR, DRAW_ALLOWED_MINUTE,
     DAY_NAMES,
 )
 
 
+def game_start_on(day):
+    """Game start on the given date: the base time unless a `time_changes`
+    entry applies. localize() picks that date's UTC offset (CET/CEST) -
+    shifting `now` and calling replace() would keep today's offset."""
+    hour, minute = GAME_START_HOUR, GAME_START_MINUTE
+    for since, change_hour, change_minute in GAME_TIME_CHANGES:
+        if since <= day:
+            hour, minute = change_hour, change_minute
+    return TIMEZONE.localize(datetime(day.year, day.month, day.day, hour, minute))
+
+
 def get_next_game_time():
     """Gets the date of the next game"""
     now = datetime.now(TIMEZONE)
-    days_ahead = GAME_DAY - now.weekday()
+    game_day = now.date() + timedelta(days=(GAME_DAY - now.weekday()) % 7)
+    next_game = game_start_on(game_day)
 
     # If today is game day but after start time, take next week
-    if days_ahead < 0 or (days_ahead == 0 and (now.hour > GAME_START_HOUR or
-                                               (now.hour == GAME_START_HOUR and now.minute >= GAME_START_MINUTE))):
-        days_ahead += 7
-
-    next_game = now + timedelta(days=days_ahead)
-    return next_game.replace(hour=GAME_START_HOUR, minute=GAME_START_MINUTE, second=0, microsecond=0)
+    if next_game <= now:
+        next_game = game_start_on(game_day + timedelta(days=7))
+    return next_game
 
 
 def parse_game_time(start_time):

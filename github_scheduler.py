@@ -7,7 +7,7 @@ Runs on a fixed cron schedule via GitHub Actions (.github/workflows/scheduler.ym
 import os
 import sys
 import logging
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import uuid
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -38,6 +38,10 @@ def load_scheduler_config():
                 'GAME_DAY': config['game']['day'],
                 'GAME_START_HOUR': config['game']['hour'],
                 'GAME_START_MINUTE': config['game']['minute'],
+                'GAME_TIME_CHANGES': sorted(
+                    (date.fromisoformat(str(change['from'])), change['hour'], change['minute'])
+                    for change in config['game'].get('time_changes') or []
+                ),
                 'SIGNUP_OPEN_DAY': config['signup']['day'],
                 'SIGNUP_OPEN_HOUR': config['signup']['hour'],
                 'SIGNUP_OPEN_MINUTE': config['signup']['minute']
@@ -52,22 +56,37 @@ TIMEZONE = CONFIG['TIMEZONE']
 GAME_DAY = CONFIG['GAME_DAY']
 GAME_START_HOUR = CONFIG['GAME_START_HOUR']
 GAME_START_MINUTE = CONFIG['GAME_START_MINUTE']
+GAME_TIME_CHANGES = CONFIG['GAME_TIME_CHANGES']
 SIGNUP_OPEN_DAY = CONFIG['SIGNUP_OPEN_DAY']
 SIGNUP_OPEN_HOUR = CONFIG['SIGNUP_OPEN_HOUR']
 SIGNUP_OPEN_MINUTE = CONFIG['SIGNUP_OPEN_MINUTE']
 
 
-def get_next_game_time():
-    """Gets the date of the next game"""
+def at_local_time(day, hour, minute):
+    """Warsaw datetime for a wall-clock time on a date. localize() picks that
+    date's UTC offset (CET/CEST) - shifting another datetime by days and
+    calling replace() would keep its old offset across a DST switch."""
+    return TIMEZONE.localize(datetime(day.year, day.month, day.day, hour, minute))
+
+
+def game_start_on(day):
+    """Game start on the given date: the base time unless a `time_changes` entry applies"""
+    hour, minute = GAME_START_HOUR, GAME_START_MINUTE
+    for since, change_hour, change_minute in GAME_TIME_CHANGES:
+        if since <= day:
+            hour, minute = change_hour, change_minute
+    return at_local_time(day, hour, minute)
+
+
+def get_next_game_time(weeks_ahead=0):
+    """Gets the date of the next game (never today's - on game day it's next week's)"""
     now = datetime.now(TIMEZONE)
     days_ahead = GAME_DAY - now.weekday()
     
-    # If today is game day but after start time, take next week
-    if days_ahead <= 0 or (days_ahead == 0 and now.hour >= GAME_START_HOUR):
+    if days_ahead <= 0:
         days_ahead += 7
     
-    next_game = now + timedelta(days=days_ahead)
-    return next_game.replace(hour=GAME_START_HOUR, minute=GAME_START_MINUTE, second=0, microsecond=0)
+    return game_start_on(now.date() + timedelta(days=days_ahead, weeks=weeks_ahead))
 
 
 def parse_game_time(start_time):
@@ -89,8 +108,8 @@ def get_signup_opening_time(game_time):
     if days_to_signup <= 0:
         days_to_signup += 7
     
-    signup_open = game_time - timedelta(days=days_to_signup)
-    return signup_open.replace(hour=SIGNUP_OPEN_HOUR, minute=SIGNUP_OPEN_MINUTE, second=0, microsecond=0)
+    signup_day = game_time.date() - timedelta(days=days_to_signup)
+    return at_local_time(signup_day, SIGNUP_OPEN_HOUR, SIGNUP_OPEN_MINUTE)
 
 
 def activate_games_for_signup(connection) -> int:
@@ -207,7 +226,7 @@ def create_upcoming_games(connection) -> int:
 def create_game_for_week(connection, weeks_ahead: int) -> bool:
     """Create game for specific week if it doesn't exist"""
     try:
-        game_time = get_next_game_time() + timedelta(weeks=weeks_ahead)
+        game_time = get_next_game_time(weeks_ahead)
         
         # Check if a game already exists
         existing_games = execute_query(connection, "SELECT * FROM games")

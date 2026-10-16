@@ -5,6 +5,13 @@ game:
   day: 2  # day of the week (0=monday, 1=tuesday, ..., 6=sunday)
   hour: 18
   minute: 30
+  # Start-time changes from a given date on (Warsaw wall-clock time; the
+  # summer/winter time switch is handled in code). The last entry whose
+  # `from` date is on or before the game date wins over hour/minute above.
+  time_changes:
+    - from: 2026-11-01  # winter season
+      hour: 19
+      minute: 30
 
 # ===== SIGNUP OPENING =====
 signup:
