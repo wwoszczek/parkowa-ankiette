@@ -2,9 +2,17 @@ name: Game scheduler
 
 on:
   schedule:
-    # UTC +0:00 - keep in mind. 08:00 + 09:00 UTC bracket the Sunday 10:00
-    # Warsaw signup opening across DST (summer = 08:00 UTC, winter = 09:00 UTC).
-    - cron: '0 8,9,14,19 * * *'
+    # Times are UTC and tied to game_consts.yaml (signup Sunday 10:00, game
+    # Wednesday evening, Warsaw time) - update them if those days change.
+    # Every run does all steps (deactivate, create, activate), so each run
+    # also covers for a delayed or dropped one.
+    # Sunday signup opening: 08:00 UTC = 10:00 CEST, 09:00 UTC = 10:00 CET;
+    # 11:30 UTC is a safety net if both were dropped.
+    - cron: '0 8,9 * * 0'
+    - cron: '30 11 * * 0'
+    # Wednesday after kickoff (22:00 CEST / 21:00 CET): deactivate the game
+    # and pre-create next week's one.
+    - cron: '0 20 * * 3'
 
   workflow_dispatch:
 

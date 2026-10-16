@@ -1,6 +1,8 @@
 # Time config for games
 
 # ===== GAMES SCHEDULE =====
+# The scheduler cron (.github/workflows/scheduler.yml) is set for these days
+# (signup Sunday morning, game Wednesday evening) - update it if they change.
 game:
   day: 2  # day of the week (0=monday, 1=tuesday, ..., 6=sunday)
   hour: 18
