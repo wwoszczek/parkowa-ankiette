@@ -12,6 +12,7 @@ from datetime import datetime
 
 from src.constants import TIMEZONE
 from src.database import SupabaseDB
+from src.utils.teams_db import rename_in_squads
 from src.utils.validation import sanitize_input, validate_player_name
 
 logger = logging.getLogger(__name__)
@@ -34,11 +35,12 @@ def get_display_name(db: SupabaseDB, email: str):
 
 def _propagate(db: SupabaseDB, email: str, base: str):
     """Rewrite the account's nickname (deduped per game) in every active game it
-    is signed up for, so a rename is visible on the current list right away."""
+    is signed up for - and in that game's saved squads - so a rename is visible
+    on the current list right away."""
     from src.utils.signup_utils import _unique_nickname  # avoid import cycle
 
     rows = db.execute_query(
-        "SELECT s.id, s.game_id FROM signups s "
+        "SELECT s.id, s.game_id, s.nickname FROM signups s "
         "JOIN games g ON g.id = s.game_id "
         "WHERE s.is_guest = FALSE AND LOWER(s.user_email) = LOWER(%s) AND g.active = TRUE",
         (email,)
@@ -49,6 +51,8 @@ def _propagate(db: SupabaseDB, email: str, base: str):
             "UPDATE signups SET nickname = %s WHERE id = %s",
             (nickname, row["id"])
         )
+        if nickname != row["nickname"]:
+            rename_in_squads(db, row["game_id"], row["nickname"], nickname)
 
 
 def set_display_name(db: SupabaseDB, email: str, name: str):

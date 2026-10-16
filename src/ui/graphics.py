@@ -5,7 +5,7 @@ Inline SVG graphics (self-contained, no external requests - safe on free tier).
 from html import escape
 
 
-def _is_light(hex_color: str) -> bool:
+def is_light(hex_color: str) -> bool:
     h = hex_color.lstrip("#")
     r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
     return (0.299 * r + 0.587 * g + 0.114 * b) > 150
@@ -31,8 +31,8 @@ def ball(size: int = 24, color: str = "currentColor", opacity: float = 1.0) -> s
 
 def jersey(hex_color: str, number=None, size: int = 26) -> str:
     """A football shirt silhouette in the team color, optional number printed on it."""
-    text_color = "#1F1F1F" if _is_light(hex_color) else "#FFFFFF"
-    stroke = "#9AA597" if _is_light(hex_color) else "rgba(0,0,0,0.12)"
+    text_color = "#1F1F1F" if is_light(hex_color) else "#FFFFFF"
+    stroke = "#9AA597" if is_light(hex_color) else "rgba(0,0,0,0.12)"
     label = (
         f'<text x="24" y="32" text-anchor="middle" font-size="15" '
         f'font-weight="800" font-family="Manrope, sans-serif" '
@@ -47,6 +47,19 @@ def jersey(hex_color: str, number=None, size: int = 26) -> str:
         "L38 25 L34 22 L34 42 L14 42 L14 22 L10 25 L4 17 L14 8 Z\" "
         f'fill="{hex_color}" stroke="{stroke}" stroke-width="1.5" stroke-linejoin="round"/>'
         f"{label}"
+        "</svg>"
+    )
+
+
+def bench(size: int = 22, color: str = "#67705F") -> str:
+    """Line-art substitutes' bench: seat, backrest and legs."""
+    return (
+        f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{color}" stroke-width="2" stroke-linecap="round" aria-hidden="true">'
+        '<line x1="3" y1="8" x2="21" y2="8"/>'
+        '<line x1="2" y1="13" x2="22" y2="13"/>'
+        '<line x1="5" y1="8" x2="5" y2="20"/>'
+        '<line x1="19" y1="8" x2="19" y2="20"/>'
         "</svg>"
     )
 

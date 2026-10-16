@@ -20,6 +20,17 @@ TEAM_COLOR_HEX = {
     "czarna": "#1F1F1F",
 }
 _DEFAULT_TEAM_HEX = "#1E7A46"
+_ASCII = str.maketrans("ąćęłńóśźż", "acelnoszz")
+
+
+def team_hex(color: str) -> str:
+    return TEAM_COLOR_HEX.get(str(color).lower(), _DEFAULT_TEAM_HEX)
+
+
+def color_slug(color: str) -> str:
+    """ASCII form of a team colour for widget keys - Streamlit turns any other
+    character of a key into "-" in its st-key-* CSS class."""
+    return str(color).lower().translate(_ASCII)
 
 
 def _render(html: str):
@@ -96,12 +107,14 @@ def stat_chips(items):
     _render(f'<div class="pk-stats">{chips}</div>')
 
 
-def players_table(signups, current_email: str | None = None, adder_names: dict | None = None):
+def players_table(signups, current_email: str | None = None, adder_names: dict | None = None,
+                  bench=()):
     """Signup list as a styled table; highlights the current user's row.
 
     `adder_names` maps an adder's e-mail to a display label (see
     signup_utils.resolve_adder_names); when omitted, names are taken only from
-    accounts present on this list."""
+    accounts present on this list. `bench` lists the reserves' nicknames in
+    queue order - their rows are marked and numbered."""
     if not signups:
         empty_state("Nikt się jeszcze nie zapisał", "Lista czeka na pierwszego śmiałka")
         return
@@ -113,11 +126,21 @@ def players_table(signups, current_email: str | None = None, adder_names: dict |
             if s.get("user_email") and not s.get("is_guest")
         }
     me = current_email.lower() if current_email else None
+    queue = {name: i for i, name in enumerate(bench, start=1)}
+    # A divider only fits when the reserves are exactly the end of the list.
+    tail = len(signups) - len(queue)
+    divider_at = tail if queue and all(s["nickname"] in queue for s in signups[tail:]) else None
 
     rows = []
     for i, s in enumerate(signups, start=1):
         badges = ""
         row_cls = ""
+        if i - 1 == divider_at:
+            rows.append(
+                '<tr class="pk-bench-divider"><td colspan="3">'
+                f"{graphics.bench(16, '#5B6F86')}<span>Ławka rezerwowych</span>"
+                "</td></tr>"
+            )
         if me and (s.get("user_email") or "").lower() == me and not s.get("is_guest"):
             badges += '<span class="pk-badge pk-badge-you">Ty</span>'
             row_cls = ' class="pk-row-me"'
@@ -127,6 +150,10 @@ def players_table(signups, current_email: str | None = None, adder_names: dict |
             badges += f'<span class="pk-badge pk-badge-guest">{escape(label)}</span>'
             if me and (s.get("added_by_email") or "").lower() == me:
                 row_cls = ' class="pk-row-me"'
+        if s["nickname"] in queue:
+            # First, so it stays visible when the badges wrap on narrow screens
+            badges = f'<span class="pk-badge pk-badge-bench">rezerwa {queue[s["nickname"]]}</span>' + badges
+            row_cls = ' class="pk-row-bench pk-row-me"' if row_cls else ' class="pk-row-bench"'
         ts = parse_timestamp(s["timestamp"])
         signed_at = (
             f'<span class="pk-time-clock">{ts.strftime("%H:%M:%S")} · </span>'
@@ -146,31 +173,99 @@ def players_table(signups, current_email: str | None = None, adder_names: dict |
         f'<tbody>{"".join(rows)}</tbody>'
         "</table></div>"
     )
+    if queue:
+        st.caption(
+            "Rezerwowi wejdą do gry w kolejności zapisów, jeśli ktoś z grających się wypisze"
+        )
+
+
+def _slot_row(i: int, slot, hex_color: str) -> str:
+    """One player line of a team card. `slot` is a nickname or a dict from
+    team_utils.lineups_with_bench ({"name"} plus "sub_for" or "out")."""
+    slot = slot if isinstance(slot, dict) else {"name": slot}
+    row_cls, note = "pk-player", ""
+    if slot.get("out"):
+        row_cls += " pk-player-out"
+        note = "nie gra · brak rezerwowych"
+    elif slot.get("sub_for"):
+        note = f"z ławki · za {slot['sub_for']}"
+    note_html = f'<span class="pk-player-note">{escape(note)}</span>' if note else ""
+    return (
+        f'<div class="{row_cls}">'
+        f'<span class="pk-jersey">{graphics.jersey(hex_color, i)}</span>'
+        '<span class="pk-player-main">'
+        f'<span class="pk-player-name">{escape(str(slot["name"]))}</span>{note_html}'
+        "</span>"
+        "</div>"
+    )
 
 
 def team_cards(teams: dict):
-    """teams: {team_color: [players]} rendered as a responsive card grid with jerseys."""
+    """teams: {team_color: [players]} rendered as a responsive card grid with
+    jerseys. A player is a nickname or a lineup slot dict (see _slot_row)."""
     cards = []
     for color, players in teams.items():
-        hex_color = TEAM_COLOR_HEX.get(str(color).lower(), _DEFAULT_TEAM_HEX)
-        rows = "".join(
-            '<div class="pk-player">'
-            f'<span class="pk-jersey">{graphics.jersey(hex_color, i)}</span>'
-            f'<span class="pk-player-name">{escape(str(p))}</span>'
-            "</div>"
-            for i, p in enumerate(players, start=1)
-        )
+        hex_color = team_hex(color)
+        on_pitch = sum(1 for p in players if not (isinstance(p, dict) and p.get("out")))
+        rows = "".join(_slot_row(i, p, hex_color) for i, p in enumerate(players, start=1))
         cards.append(
             f'<div class="pk-team" style="--team:{hex_color}">'
             '<div class="pk-team-head">'
             f'<span class="pk-team-jersey">{graphics.jersey(hex_color, None, 30)}</span>'
             f"<span>Drużyna {escape(str(color))}</span>"
-            f'<span class="pk-team-count">{len(players)}</span>'
+            f'<span class="pk-team-count">{on_pitch}</span>'
             "</div>"
             f'<div class="pk-team-players">{rows}</div>'
             "</div>"
         )
     _render(f'<div class="pk-teams">{"".join(cards)}</div>')
+
+
+def bench_card(names, hint: str = ""):
+    """The reserve bench: queued players (not tied to any team), numbered."""
+    if not names:
+        return
+    items = "".join(
+        '<span class="pk-bench-item">'
+        f'<span class="pk-bench-no">{i}</span>{escape(str(name))}'
+        "</span>"
+        for i, name in enumerate(names, start=1)
+    )
+    hint_html = f'<div class="pk-bench-hint">{escape(hint)}</div>' if hint else ""
+    _render(
+        '<div class="pk-bench">'
+        '<div class="pk-bench-head">'
+        f"{graphics.bench(20)}<span>Ławka rezerwowych</span>"
+        f'<span class="pk-team-count">{len(names)}</span>'
+        "</div>"
+        f'<div class="pk-bench-list">{items}</div>'
+        f"{hint_html}"
+        "</div>"
+    )
+
+
+def builder_team_head(color: str, count: int, target: int):
+    """Header of a team box in the squad builder: shirt, name, filled/target."""
+    hex_color = team_hex(color)
+    state = "pk-over" if count > target else "pk-full" if count == target else ""
+    _render(
+        '<div class="pk-team-head pk-builder-head">'
+        f'<span class="pk-team-jersey">{graphics.jersey(hex_color, None, 28)}</span>'
+        f"<span>Drużyna {escape(str(color))}</span>"
+        f'<span class="pk-team-count {state}">{count}/{target}</span>'
+        "</div>"
+    )
+
+
+def builder_label(text: str):
+    """Small uppercase label above a group of builder controls."""
+    _render(f'<div class="pk-builder-label">{escape(text)}</div>')
+
+
+def squad_owner(name: str, is_you: bool = False):
+    """Who set the squads (the account that holds them)."""
+    you = '<span class="pk-badge pk-badge-you">Ty</span>' if is_you else ""
+    _render(f'<div class="pk-account">Składy ustala: <b>{escape(name)}</b>{you}</div>')
 
 
 def account_strip(name: str):

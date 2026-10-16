@@ -1,5 +1,5 @@
 # Direct dependencies (plain pip). Streamlit Community Cloud installs from this.
-streamlit[auth]>=1.47.0   # [auth] extra = Authlib, needed by st.login
+streamlit[auth]>=1.50.0   # [auth] = Authlib for st.login; 1.50+ for horizontal containers and button width
 httpx>=0.27               # required by Authlib's starlette OAuth client
 psycopg2-binary>=2.9.7
 python-dotenv>=1.0.0

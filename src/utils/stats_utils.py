@@ -9,6 +9,8 @@ import streamlit as st
 from src.constants import TIMEZONE
 from src.database import SupabaseDB
 from src.utils.datetime_utils import parse_game_time, season_bounds
+from src.utils.team_utils import bench_for
+from src.utils.teams_db import get_squads_between
 
 
 def list_seasons(db: SupabaseDB) -> list:
@@ -39,17 +41,33 @@ def _player_key(row) -> str:
     return "n:" + row["nickname"].lower()
 
 
+def _benched(rows, squads) -> set:
+    """(game_id, nickname) of reserves who stayed on the bench, per the saved
+    squads (games without squads count everyone, as before the bench)."""
+    by_game = {}
+    for row in rows:
+        by_game.setdefault(row["game_id"], []).append(row["nickname"])
+    return {
+        (game_id, name)
+        for game_id, names in by_game.items() if game_id in squads
+        for name in bench_for(names, squads[game_id])
+    }
+
+
 def season_stats(db: SupabaseDB, start, end):
     """Overview totals and the attendance ranking for games already played
     within [start, end). Returns (overview, ranking) where ranking is a list of
-    {name, count, is_guest} sorted by attendance desc."""
+    {name, count, is_guest} sorted by attendance desc. Reserves who stayed on
+    the bench count as signups, not as games played."""
     try:
         rows = db.execute_query(
             "SELECT s.nickname, s.user_email, s.is_guest, s.game_id, g.start_time "
             "FROM signups s JOIN games g ON g.id = s.game_id "
-            "WHERE g.start_time >= %s AND g.start_time < %s AND g.start_time < %s",
+            "WHERE g.start_time >= %s AND g.start_time < %s AND g.start_time < %s "
+            "ORDER BY s.timestamp",
             (start, end, datetime.now(TIMEZONE))
         ) or []
+        benched = _benched(rows, get_squads_between(db, start, end))
     except Exception:
         st.error("Błąd podczas liczenia statystyk")
         return {"games": 0, "players": 0, "signups": 0}, []
@@ -57,6 +75,8 @@ def season_stats(db: SupabaseDB, start, end):
     players, games = {}, set()
     for row in rows:
         games.add(row["game_id"])
+        if (row["game_id"], row["nickname"]) in benched:
+            continue
         key = _player_key(row)
         played_at = parse_game_time(row["start_time"])
         player = players.get(key)
