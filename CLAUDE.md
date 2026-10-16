@@ -26,7 +26,7 @@ Database connection requires either `SUPABASE_DATABASE_URL` in `.env` (checked f
 Two independent entry points share one config file, `game_consts.yaml`:
 
 1. **Streamlit UI** (`app.py` + `src/`) — user-facing app.
-2. **`github_scheduler.py`** — standalone script run by GitHub Actions (`.github/workflows/scheduler.yml`, cron at 9/14/19 UTC). It deliberately does **not** import from `src/` so it can run without Streamlit installed; it duplicates the YAML loading and time logic. If you change scheduling logic or `game_consts.yaml` structure, update both sides.
+2. **`github_scheduler.py`** — standalone script run by GitHub Actions (`.github/workflows/scheduler.yml`, cron on Sunday 08/09/11:30 UTC around signup opening and Wednesday 20 UTC after the game — tied to the days in `game_consts.yaml`). It deliberately does **not** import from `src/` so it can run without Streamlit installed; it duplicates the YAML loading and time logic. If you change scheduling logic or `game_consts.yaml` structure, update both sides.
 
 ### Game lifecycle
 
