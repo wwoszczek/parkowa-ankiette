@@ -244,15 +244,55 @@ def bench_card(names, hint: str = ""):
     )
 
 
-def builder_team_head(color: str, count: int, target: int):
-    """Header of a team box in the squad builder: shirt, name, filled/target."""
-    hex_color = team_hex(color)
-    state = "pk-over" if count > target else "pk-full" if count == target else ""
+def team_scoreboard(teams: dict, targets: dict):
+    """Builder header: per team its shirt, name and filled/target, with a bar."""
+    cells = []
+    for color, players in teams.items():
+        hex_color = team_hex(color)
+        count, target = len(players), targets[color]
+        state = "pk-over" if count > target else "pk-full" if count == target else ""
+        pct = min(100, round(100 * count / target)) if target else 0
+        cells.append(
+            f'<div class="pk-score {state}" style="--team:{hex_color}">'
+            f'<span class="pk-score-jersey">{graphics.jersey(hex_color, None, 26)}</span>'
+            '<span class="pk-score-main">'
+            f'<span class="pk-score-name">{escape(str(color).capitalize())}</span>'
+            f'<span class="pk-score-track"><span style="width:{pct}%"></span></span>'
+            "</span>"
+            f'<span class="pk-score-count">{count}/{target}</span>'
+            "</div>"
+        )
+    _render(f'<div class="pk-scoreboard">{"".join(cells)}</div>')
+
+
+def roster_name(number: int, name: str, drawn: bool = False):
+    """Name cell of a roster row in the builder (dice = placed at random)."""
+    dice = f'<span class="pk-roster-dice" title="wylosowany">{graphics.dice(15)}</span>' if drawn else ""
     _render(
-        '<div class="pk-team-head pk-builder-head">'
-        f'<span class="pk-team-jersey">{graphics.jersey(hex_color, None, 28)}</span>'
-        f"<span>Drużyna {escape(str(color))}</span>"
-        f'<span class="pk-team-count {state}">{count}/{target}</span>'
+        '<div class="pk-roster-name">'
+        f'<span class="pk-roster-no">{number}</span>'
+        f'<span class="pk-roster-text">{escape(name)}</span>{dice}'
+        "</div>"
+    )
+
+
+def roster_bench(names, limit: int):
+    """Reserves at the end of the builder roster: no shirts, queue numbers."""
+    if not names:
+        return
+    rows = "".join(
+        '<div class="pk-roster-bench-row">'
+        f'<span class="pk-roster-no">{limit + i}</span>'
+        f'<span class="pk-roster-text">{escape(name)}</span>'
+        f'<span class="pk-badge pk-badge-bench">rezerwa {i}</span>'
+        "</div>"
+        for i, name in enumerate(names, start=1)
+    )
+    _render(
+        '<div class="pk-roster-bench">'
+        f'<div class="pk-roster-bench-head">{graphics.bench(16, "#5B6F86")}'
+        f"<span>Ławka rezerwowych · ponad limit {limit} graczy</span></div>"
+        f"{rows}"
         "</div>"
     )
 

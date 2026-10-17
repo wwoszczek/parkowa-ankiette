@@ -235,94 +235,98 @@ footer { visibility: hidden; }
 .pk-account { color: #51604F; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.4rem; }
 .pk-account b { color: #15301F; }
 
-/* Squad builder chips: pool players (sqp-), team members (sqm-<colour>-) and
-   the team picker (sqtgt-on|off-<colour>-) are plain buttons styled by key
-   prefix - widget internals differ between Streamlit versions, keys do not.
-   Per-colour rules are generated in _team_css(). */
-[class*="st-key-sqp-"] button,
-[class*="st-key-sqm-"] button {
-    min-height: 2.1rem; padding: 0.2rem 0.85rem; border-radius: 999px;
+/* Squad builder: a roster of the signups, one row per player with a shirt
+   button per team (sqsh-on|off-<colour>-), rows tinted with the team of the
+   shirt they got (sqrow-<colour>|none-). Plain buttons and containers styled
+   by key prefix - widget internals differ between Streamlit versions, keys do
+   not. Per-colour rules are generated in _team_css(). */
+[class*="st-key-sqlist-"] {
+    background: #FFFFFF; border: 1px solid #E6E9E1; border-radius: 16px;
+    padding: 0.35rem; gap: 0.15rem !important;
 }
-[class*="st-key-sqp-"] button p,
-[class*="st-key-sqm-"] button p { font-size: 0.92rem; font-weight: 700; color: inherit; }
-/* After a click the chips re-flow, so leftover focus (and the sticky hover of
-   touch screens) would land on a different player and look selected - only
-   keyboard focus and real mouse hover are shown. */
-[class*="st-key-sqp-"] button,
-[class*="st-key-sqp-"] button:hover,
-[class*="st-key-sqp-"] button:focus:not(:focus-visible) {
-    background: #FFFFFF; color: #22302A; border: 1.5px solid #DCE3D6; box-shadow: none;
+[class*="st-key-sqrow-"] {
+    flex-wrap: nowrap !important; align-items: center; gap: 0.3rem !important;
+    padding: 0.2rem 0.3rem 0.2rem 0.5rem; border-radius: 12px;
+    border-left: 4px solid transparent;
+    transition: background-color 0.15s ease;
 }
-/* The "+" of a pool player takes the active team's colour from the tray */
-[class*="st-key-sqp-"] [data-testid="stIconMaterial"] { color: var(--team-edge, #1E7A46); }
-@media (hover: hover) {
-    [class*="st-key-sqp-"] button:hover, [class*="st-key-sqp-"] button:hover:focus {
-        background: #FFFFFF; color: #15301F; border-color: var(--team-edge, #1E7A46);
-    }
-    [class*="st-key-sqm-"] button:hover { filter: brightness(0.92); }
-    [class*="st-key-sqm-"] button:hover p::after { opacity: 1; }
+[class*="st-key-sqrow-"] > :first-child { flex: 1 1 auto; min-width: 0; }
+/* Streamlit pulls markdown up with a negative bottom margin - in a row that
+   would push the name below the shirts' centre line */
+[class*="st-key-sqrow-"] [data-testid="stMarkdownContainer"] { margin-bottom: 0 !important; }
+.pk-roster-name { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.pk-roster-no {
+    flex: 0 0 1.4rem; text-align: right; color: #9AA597; font-weight: 700;
+    font-size: 0.82rem; font-variant-numeric: tabular-nums;
 }
-/* Tighter wrapping for chip rows */
-[class*="st-key-sqpool-"], [class*="st-key-sqmembers-"],
-[class*="st-key-sqcounts-"] { gap: 0.45rem !important; }
-[class*="st-key-sqm-"] button {
-    background: #1E7A46; color: #FFFFFF; border: 1.5px solid #1E7A46;
+.pk-roster-text {
+    font-weight: 700; color: #22302A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-/* The "x" says a click takes the player back out of the team */
-[class*="st-key-sqm-"] button p::after { content: "×"; margin-left: 0.4rem; opacity: 0.6; font-weight: 800; }
-/* Pool tray: tinted with the active team's colour (per-colour variables
-   from _team_css), so it is obvious where a tapped player goes */
-[class*="st-key-sqtray-"] {
-    background: var(--team-tint, #F3F8F4) !important;
-    border: 1px solid rgba(21, 48, 31, 0.08) !important;
-    border-left: 5px solid var(--team-edge, #1E7A46) !important;
-    border-radius: 16px !important;
+.pk-roster-dice { display: inline-flex; color: #8B968A; flex: 0 0 auto; }
+.pk-roster-dice svg { display: block; }
+[class*="st-key-sqrow-none-"] .pk-roster-text { color: #3A463E; font-weight: 600; }
+/* Shirt buttons: the label (team name) stays for screen readers, the shirt
+   picture is drawn instead of the text */
+[class*="st-key-sqsh-"] button {
+    width: 2.6rem; height: 2.6rem; min-height: 2.6rem; padding: 0; border-radius: 12px;
+    background: transparent; border: 1.5px solid transparent; box-shadow: none;
 }
-[class*="st-key-sqtray-"] .pk-builder-label { margin-top: 0.1rem; }
-/* Team picker: a segmented "shirt switch" - a track with one tab per team,
-   the active tab lifted as a white card. Looks like a mode, not a player. */
-[class*="st-key-sqtargets-"] {
-    background: rgba(21, 48, 31, 0.07); border-radius: 14px; padding: 4px;
-    gap: 4px !important; width: fit-content; max-width: 100%;
-}
-[class*="st-key-sqtgt-"] button {
-    min-height: 2.6rem; padding: 0.25rem 0.9rem 0.25rem 0.6rem; border-radius: 11px;
-}
-[class*="st-key-sqtgt-"] button p {
-    display: flex; align-items: center; font-size: 0.92rem; font-weight: 700; color: inherit;
-}
-[class*="st-key-sqtgt-"] button p::before {
-    content: ""; width: 1.5rem; height: 1.5rem; margin-right: 0.45rem; flex: 0 0 auto;
+[class*="st-key-sqsh-"] button p { font-size: 0; line-height: 0; }
+[class*="st-key-sqsh-"] button p::before {
+    content: ""; display: inline-block; width: 1.65rem; height: 1.65rem;
     background: var(--jersey) center / contain no-repeat;
 }
-[class*="st-key-sqtgt-off-"] button,
-[class*="st-key-sqtgt-off-"] button:hover,
-[class*="st-key-sqtgt-off-"] button:focus:not(:active),
-[class*="st-key-sqtgt-off-"] button:active {
-    background: transparent; color: #67705F; border: 1.5px solid transparent; box-shadow: none;
-}
-[class*="st-key-sqtgt-off-"] button p::before { opacity: 0.55; }
+[class*="st-key-sqsh-off-"] button,
+[class*="st-key-sqsh-off-"] button:hover,
+[class*="st-key-sqsh-off-"] button:focus:not(:active),
+[class*="st-key-sqsh-off-"] button:active { background: transparent; border-color: transparent; box-shadow: none; }
+[class*="st-key-sqsh-off-"] button p::before { opacity: 0.32; }
 @media (hover: hover) {
-    [class*="st-key-sqtgt-off-"] button:hover { background: rgba(255, 255, 255, 0.7); color: #15301F; }
+    [class*="st-key-sqsh-off-"] button:hover { background: rgba(21, 48, 31, 0.05); }
+    [class*="st-key-sqsh-off-"] button:hover p::before { opacity: 0.85; }
 }
-/* Phones: three equal tabs in one row, shirt above name and count */
+/* Builder header: the teams' scoreboard, stuck under the top bar while the
+   roster scrolls (Streamlit wraps the keyed container, so the wrapper sticks) */
+div:has(> [class*="st-key-sqscore-"]) {
+    position: sticky; top: 3.75rem; z-index: 20;
+}
+[class*="st-key-sqscore-"] {
+    background: rgba(250, 250, 247, 0.92); backdrop-filter: blur(6px);
+    padding: 0.35rem 0; border-radius: 0 0 14px 14px;
+}
+.pk-scoreboard { display: flex; gap: 0.5rem; }
+.pk-score {
+    flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 0.45rem;
+    background: #FFFFFF; border: 1px solid #E6E9E1; border-top: 3px solid var(--team);
+    border-radius: 12px; padding: 0.4rem 0.6rem;
+    box-shadow: 0 2px 8px rgba(20, 32, 26, 0.06);
+}
+.pk-score-jersey { display: inline-flex; flex: 0 0 auto; }
+.pk-score-jersey svg { display: block; }
+.pk-score-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 0.25rem; }
+.pk-score-name { font-weight: 800; font-size: 0.88rem; color: #15301F; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pk-score-track { height: 4px; border-radius: 999px; background: #EEF1E9; overflow: hidden; }
+.pk-score-track span { display: block; height: 100%; border-radius: 999px; background: #9AA597; }
+.pk-score.pk-full .pk-score-track span { background: #1E7A46; }
+.pk-score.pk-over .pk-score-track span { background: #C98A1E; }
+.pk-score-count { font-weight: 800; font-size: 0.95rem; color: #15301F; font-variant-numeric: tabular-nums; }
+.pk-score.pk-full .pk-score-count { color: #176A3E; }
+.pk-score.pk-over .pk-score-count { color: #8A5A13; }
+/* Reserves at the end of the roster */
+.pk-roster-bench { margin-top: 0.35rem; padding: 0.4rem 0.3rem 0.2rem; border-top: 1px dashed #C9D3DE; }
+.pk-roster-bench-head {
+    display: flex; align-items: center; gap: 0.4rem; padding: 0.15rem 0.3rem 0.35rem;
+    font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #5B6F86;
+}
+.pk-roster-bench-head svg { display: block; }
+.pk-roster-bench-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.3rem 0.45rem 0.75rem; }
+.pk-roster-bench-row .pk-roster-text { color: #6B7A8C; font-weight: 600; }
+/* Phones: scoreboard cells show shirt, count and bar - the shirt names the team */
 @media (max-width: 640px) {
-    [class*="st-key-sqtargets-"] { width: 100%; flex-wrap: nowrap !important; }
-    [class*="st-key-sqtgt-"] { flex: 1 1 0; min-width: 0; width: auto !important; }
-    [class*="st-key-sqtgt-"] button { width: 100%; padding: 0.35rem 0.25rem; }
-    [class*="st-key-sqtgt-"] button p {
-        flex-direction: column; text-align: center; white-space: normal;
-        line-height: 1.2; font-size: 0.82rem;
-    }
-    [class*="st-key-sqtgt-"] button p::before { margin: 0 0 0.15rem; }
-}
-[class*="st-key-sqtgt-on-"] button,
-[class*="st-key-sqtgt-on-"] button:hover,
-[class*="st-key-sqtgt-on-"] button:focus:not(:active),
-[class*="st-key-sqtgt-on-"] button:active {
-    background: #FFFFFF; color: #15301F;
-    border: 1.5px solid var(--team-edge, #1E7A46);
-    box-shadow: 0 1px 2px rgba(20, 32, 26, 0.10), 0 3px 10px rgba(20, 32, 26, 0.08);
+    .pk-scoreboard { gap: 0.35rem; }
+    .pk-score { padding: 0.35rem 0.5rem; gap: 0.4rem; }
+    .pk-score-name { display: none; }
+    [class*="st-key-sqsh-"] button { width: 2.45rem; height: 2.45rem; min-height: 2.45rem; }
 }
 /* Team count picker */
 [class*="st-key-sqcnt-"] button { min-height: 2.1rem; padding: 0.2rem 0.85rem; border-radius: 999px; }
@@ -336,13 +340,6 @@ footer { visibility: hidden; }
 [class*="st-key-sqcnt-on-"] button:focus:not(:active),
 [class*="st-key-sqcnt-on-"] button:active { background: #15301F; color: #FFFFFF; border: 1.5px solid #15301F; }
 
-/* Team boxes in the builder */
-[class*="st-key-sqteam-"] {
-    border-top: 4px solid var(--team, #1E7A46) !important;
-    border-radius: 14px !important;
-    background: #FFFFFF;
-}
-.pk-builder-head { margin-bottom: 0.1rem; }
 .pk-team-count.pk-full { background: #DCEFE2; color: #176A3E; }
 .pk-team-count.pk-over { background: #FBEBD5; color: #8A5A13; }
 .pk-builder-label {
@@ -434,32 +431,27 @@ def _tint(hex_color: str, amount: float) -> str:
 
 
 def _team_css() -> str:
-    """Shirt-colour rules for the squad builder: member chips, team boxes, the
-    shirt switch and the pool tray."""
+    """Shirt-colour rules for the squad builder: shirt buttons and the roster
+    rows of players who got that shirt."""
     rules = []
     for color, hex_color in TEAM_COLOR_HEX.items():
         slug = color_slug(color)
         light = is_light(hex_color)
-        text = "#1F1F1F" if light else "#FFFFFF"
         # A white shirt vanishes on the light UI - its accents use the darker
         # outline colour instead
         edge = "#7A8578" if light else hex_color
-        tint = "#F1F3EE" if light else _tint(hex_color, 0.07)
+        tint = "#EEF0EB" if light else _tint(hex_color, 0.09)
         # As an image (not inline HTML) the SVG needs its namespace
         svg = graphics.jersey(hex_color, None, 26).replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ', 1)
         jersey = "data:image/svg+xml," + quote(svg)
-        members = ", ".join(
-            f'[class*="st-key-sqm-{slug}-"] button{state}'
+        shirt_on = ", ".join(
+            f'[class*="st-key-sqsh-on-{slug}-"] button{state}'
             for state in ("", ":hover", ":focus:not(:active)", ":active")
         )
         rules.append(
-            f'[class*="st-key-sqteam-{slug}-"] {{ --team: {hex_color}; }}\n'
-            f"{members} {{ background: {hex_color}; color: {text}; border: 1.5px solid {edge}; }}\n"
-            f'[class*="st-key-sqtgt-on-{slug}-"], [class*="st-key-sqtgt-off-{slug}-"] {{ --jersey: url("{jersey}"); }}\n'
-            f'[class*="st-key-sqtgt-on-{slug}-"] {{ --team-edge: {edge}; }}\n'
-            f'[class*="st-key-sqtray-{slug}-"] {{ --team-edge: {edge}; --team-tint: {tint}; }}\n'
-            # The team a tapped player goes to glows in its colour
-            f'[class*="st-key-sqteam-{slug}-on-"] {{ box-shadow: 0 0 0 3px {edge}38, 0 8px 22px {edge}22; }}'
+            f'[class*="st-key-sqsh-on-{slug}-"], [class*="st-key-sqsh-off-{slug}-"] {{ --jersey: url("{jersey}"); }}\n'
+            f"{shirt_on} {{ background: #FFFFFF; border: 2px solid {edge}; box-shadow: 0 2px 6px {edge}33; }}\n"
+            f'[class*="st-key-sqrow-{slug}-"] {{ background: {tint}; border-left-color: {edge}; }}'
         )
     return "<style>\n" + "\n".join(rules) + "\n</style>"
 

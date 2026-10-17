@@ -54,9 +54,8 @@ def _show_flash():
 
 # ----- Builder state -------------------------------------------------------
 # Kept in session state per game: {"count": team count, "teams": {color:
-# [players]}, "random": players placed by the dice, "active": the team a click
-# in the pool adds to}, plus "playing"/"targets" refreshed on every render for
-# the callbacks below. Buttons stay clickable while a rerun is in flight, so a
+# [players]}, "random": players placed by the dice}, plus "playing"/"targets"
+# refreshed on every render for the callbacks below. Buttons stay clickable while a rerun is in flight, so a
 # double click can replay a callback on a chip that already moved - the
 # callbacks ignore such stale clicks.
 
@@ -65,7 +64,7 @@ def _new_state(players: list, saved: dict | None) -> dict:
     if saved and len(saved) in TEAM_COUNTS:
         count = len(saved)
     teams = {color: list((saved or {}).get(color, [])) for color in team_colors(count)}
-    return {"count": count, "teams": teams, "random": set(), "active": next(iter(teams))}
+    return {"count": count, "teams": teams, "random": set()}
 
 
 def _sync(state: dict, players: list):
@@ -85,32 +84,21 @@ def _pool(state: dict) -> list:
     return [p for p in state["playing"] if p not in assigned]
 
 
-def _pick(state: dict, player: str):
-    """Pool -> active team. Once the team is full, move on to the next one
-    that still has room."""
-    if player not in _pool(state):
+def _assign(state: dict, player: str, color: str, take_off: bool):
+    """Hand `player` the `color` shirt, or take it back (take_off). Stated as
+    the intended end result, so a replayed double click changes nothing."""
+    if player not in state["playing"] or color not in state["teams"]:
         return
-    color = state["active"]
-    state["teams"][color].append(player)
+    current = next((c for c, names in state["teams"].items() if player in names), None)
+    if take_off:
+        if current != color:
+            return
+        state["teams"][color].remove(player)
+    elif current != color:
+        if current:
+            state["teams"][current].remove(player)
+        state["teams"][color].append(player)
     state["random"].discard(player)
-    if len(state["teams"][color]) >= state["targets"][color]:
-        state["active"] = next(
-            (c for c, names in state["teams"].items() if len(names) < state["targets"][c]),
-            color,
-        )
-
-
-def _drop(state: dict, color: str, player: str):
-    """Team -> pool."""
-    if player not in state["teams"].get(color, []):
-        return
-    state["teams"][color].remove(player)
-    state["random"].discard(player)
-
-
-def _target(state: dict, color: str):
-    if color in state["teams"]:
-        state["active"] = color
 
 
 def _draw(state: dict):
@@ -128,14 +116,12 @@ def _draw(state: dict):
 def _clear(state: dict):
     state["teams"] = {color: [] for color in state["teams"]}
     state["random"] = set()
-    state["active"] = next(iter(state["teams"]))
 
 
 def _set_count(state: dict, count: int):
     teams = state["teams"]
     state["count"] = count
     state["teams"] = {color: teams.get(color, []) for color in team_colors(count)}
-    state["active"] = next(iter(state["teams"]))
 
 
 def _close_builder(game_id: str):
@@ -169,12 +155,9 @@ def _builder(db, game, players: list, user: dict, admin: bool,
     state = st.session_state[key]
     _sync(state, players)
     teams, targets = state["teams"], state["targets"]
-    if opening:  # start on the first team that still has room
-        state["active"] = next(
-            (c for c, names in teams.items() if len(names) < targets[c]), state["active"]
-        )
     pool = _pool(state)
     bench = players[len(state["playing"]):]
+    team_of = {p: color for color, names in teams.items() for p in names}
 
     if saved and mine:
         st.caption(f"Edytujesz swoje składy (konto: {user['email']})")
@@ -209,36 +192,15 @@ def _builder(db, game, players: list, user: dict, admin: bool,
             f"graczy, na liście jest {len(players)} — możesz je ustalić mimo to."
         )
 
-    if pool:
-        # The pool is a tray tinted with the active team's colour, the team
-        # picker a shirt switch on top of it - so picking a team reads as a
-        # mode, not as one more player.
-        with st.container(border=True, key=f"sqtray-{ui.color_slug(state['active'])}-{gid}"):
-            ui.builder_label("Dodajesz do")
-            with st.container(horizontal=True, key=f"sqtargets-{gid}"):
-                for color, names in teams.items():
-                    on = color == state["active"]
-                    st.button(
-                        f"{color.capitalize()} {len(names)}/{targets[color]}",
-                        key=f"sqtgt-{'on' if on else 'off'}-{ui.color_slug(color)}-{gid}",
-                        on_click=_target,
-                        args=(state, color),
-                    )
-            ui.builder_label(f"Do rozdzielenia · {len(pool)}")
-            with st.container(horizontal=True, key=f"sqpool-{gid}"):
-                for player in pool:
-                    st.button(
-                        player, key=f"sqp-{gid}-{player}", icon=":material/add:",
-                        on_click=_pick, args=(state, player),
-                    )
-    else:
-        st.caption(":material/check_circle: Wszyscy grający są w drużynach")
+    # Scoreboard of the teams, stuck to the top while scrolling the roster
+    with st.container(key=f"sqscore-{gid}"):
+        ui.team_scoreboard(teams, targets)
 
     with st.container(horizontal=True, key=f"sqactions-{gid}"):
-        # One dice button: draws whoever is not placed by hand, so once used
-        # it re-rolls the random part and keeps the hand-picked core.
+        # One dice button: draws whoever has no shirt yet, so once used it
+        # re-rolls the random part and keeps the hand-picked core.
         st.button(
-            "Przelosuj" if state["random"] else "Losuj resztę",
+            "Przelosuj" if state["random"] else "Rozdaj resztę losowo",
             icon=":material/casino:", key=f"sqdraw-{gid}",
             on_click=_draw, args=(state,), disabled=not (pool or state["random"]),
         )
@@ -247,25 +209,30 @@ def _builder(db, game, players: list, user: dict, admin: bool,
             on_click=_clear, args=(state,), disabled=len(pool) == len(state["playing"]),
         )
 
-    for col, (color, names) in zip(st.columns(len(teams)), teams.items()):
-        slug = ui.color_slug(color)
-        here = "on" if pool and color == state["active"] else "off"
-        with col, st.container(border=True, key=f"sqteam-{slug}-{here}-{gid}"):
-            ui.builder_team_head(color, len(names), targets[color])
-            if names:
-                with st.container(horizontal=True, key=f"sqmembers-{slug}-{gid}"):
-                    for player in names:
+    roster_col, preview_col = st.columns([7, 5], gap="medium")
+    with roster_col:
+        # The roster: the signup list itself, one row per player with a shirt
+        # per team - tapping a shirt hands it to the player (tap again to take
+        # it back). Rows never move, so taps can't land on the wrong player.
+        ui.builder_label("Rozdaj koszulki")
+        with st.container(key=f"sqlist-{gid}"):
+            for number, player in enumerate(state["playing"], start=1):
+                color = team_of.get(player)
+                row = ui.color_slug(color) if color else "none"
+                with st.container(horizontal=True, key=f"sqrow-{row}-{gid}-{player}"):
+                    ui.roster_name(number, player, drawn=player in state["random"])
+                    for shirt in teams:
+                        on = shirt == color
                         st.button(
-                            player,
-                            key=f"sqm-{slug}-{gid}-{player}",
-                            icon=":material/casino:" if player in state["random"] else None,
-                            on_click=_drop,
-                            args=(state, color, player),
+                            shirt.capitalize(),
+                            key=f"sqsh-{'on' if on else 'off'}-{ui.color_slug(shirt)}-{gid}-{player}",
+                            on_click=_assign,
+                            args=(state, player, shirt, on),
                         )
-            else:
-                st.caption("Pusto — wybierz tę drużynę i klikaj graczy")
-
-    ui.bench_card(bench, f"Zapisali się ponad limit {len(state['playing'])} graczy. {BENCH_HINT}")
+            ui.roster_bench(bench, len(state["playing"]))
+    with preview_col:
+        ui.builder_label("Podgląd składów")
+        ui.team_cards(teams)
 
     problems = []
     if pool:

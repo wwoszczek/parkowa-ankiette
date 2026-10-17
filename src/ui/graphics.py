@@ -64,6 +64,20 @@ def bench(size: int = 22, color: str = "#67705F") -> str:
     )
 
 
+def dice(size: int = 16, color: str = "currentColor") -> str:
+    """Small die (five pips) marking players placed at random."""
+    return (
+        f'<svg width="{size}" height="{size}" viewBox="0 0 24 24" fill="none" '
+        f'stroke="{color}" stroke-width="2" aria-hidden="true">'
+        '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/>'
+        f'<g fill="{color}" stroke="none">'
+        '<circle cx="8.5" cy="8.5" r="1.6"/><circle cx="15.5" cy="8.5" r="1.6"/>'
+        '<circle cx="12" cy="12" r="1.6"/>'
+        '<circle cx="8.5" cy="15.5" r="1.6"/><circle cx="15.5" cy="15.5" r="1.6"/>'
+        "</g></svg>"
+    )
+
+
 # Faint pitch motif for the hero card: the halfway line with the centre
 # circle and spot sitting on it. Opacity sits on the group (not on individual
 # strokes) so overlapping shapes composite evenly instead of stacking up

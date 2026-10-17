@@ -14,10 +14,12 @@ free-tier friendly.
 - Self sign-out at any time; admins can remove any entry
 
 ### Squad builder
-- Squads are set **by hand**: pick a team, tap players to put them in it
-  (tap a player in a team to take them out). Placing someone by hand is also
-  how shirt constraints work (a player who only owns one colour)
-- **Losuj resztę** randomly fills the open places around the hand-picked
+- Squads are set **by hand** by handing out shirts: the signup list with a
+  shirt per team next to every player - tap a shirt to put the player in that
+  team, tap it again to take it back. A sticky scoreboard shows the team
+  counts and a preview shows the squads. Placing someone by hand is also how
+  shirt constraints work (a player who only owns one colour)
+- **Rozdaj resztę losowo** randomly fills the open places around the hand-picked
   core, balancing team sizes; clicked again (**Przelosuj**) it re-rolls only
   the random part. Nothing is saved until the setter clicks **Zatwierdź składy**
 - **First come, first served**: the account that approves a game's squads
