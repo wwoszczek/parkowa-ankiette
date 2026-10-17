@@ -2,8 +2,11 @@
 Global stylesheet injected once per page render.
 """
 
+from urllib.parse import quote
+
 import streamlit as st
 
+from src.ui import graphics
 from src.ui.components import TEAM_COLOR_HEX, color_slug
 from src.ui.graphics import is_light
 
@@ -237,13 +240,11 @@ footer { visibility: hidden; }
    prefix - widget internals differ between Streamlit versions, keys do not.
    Per-colour rules are generated in _team_css(). */
 [class*="st-key-sqp-"] button,
-[class*="st-key-sqm-"] button,
-[class*="st-key-sqtgt-"] button {
+[class*="st-key-sqm-"] button {
     min-height: 2.1rem; padding: 0.2rem 0.85rem; border-radius: 999px;
 }
 [class*="st-key-sqp-"] button p,
-[class*="st-key-sqm-"] button p,
-[class*="st-key-sqtgt-"] button p { font-size: 0.92rem; font-weight: 700; color: inherit; }
+[class*="st-key-sqm-"] button p { font-size: 0.92rem; font-weight: 700; color: inherit; }
 /* After a click the chips re-flow, so leftover focus (and the sticky hover of
    touch screens) would land on a different player and look selected - only
    keyboard focus and real mouse hover are shown. */
@@ -252,32 +253,76 @@ footer { visibility: hidden; }
 [class*="st-key-sqp-"] button:focus:not(:focus-visible) {
     background: #FFFFFF; color: #22302A; border: 1.5px solid #DCE3D6; box-shadow: none;
 }
+/* The "+" of a pool player takes the active team's colour from the tray */
+[class*="st-key-sqp-"] [data-testid="stIconMaterial"] { color: var(--team-edge, #1E7A46); }
 @media (hover: hover) {
     [class*="st-key-sqp-"] button:hover, [class*="st-key-sqp-"] button:hover:focus {
-        background: #F0F8F2; color: #176A3E; border-color: #1E7A46;
+        background: #FFFFFF; color: #15301F; border-color: var(--team-edge, #1E7A46);
     }
     [class*="st-key-sqm-"] button:hover { filter: brightness(0.92); }
     [class*="st-key-sqm-"] button:hover p::after { opacity: 1; }
 }
 /* Tighter wrapping for chip rows */
 [class*="st-key-sqpool-"], [class*="st-key-sqmembers-"],
-[class*="st-key-sqtargets-"], [class*="st-key-sqcounts-"] { gap: 0.45rem !important; }
+[class*="st-key-sqcounts-"] { gap: 0.45rem !important; }
 [class*="st-key-sqm-"] button {
     background: #1E7A46; color: #FFFFFF; border: 1.5px solid #1E7A46;
 }
 /* The "x" says a click takes the player back out of the team */
 [class*="st-key-sqm-"] button p::after { content: "×"; margin-left: 0.4rem; opacity: 0.6; font-weight: 800; }
-[class*="st-key-sqtgt-off-"] button {
-    background: #FFFFFF; color: #3A463E; border: 1.5px solid #DCE3D6;
+/* Pool tray: tinted with the active team's colour (per-colour variables
+   from _team_css), so it is obvious where a tapped player goes */
+[class*="st-key-sqtray-"] {
+    background: var(--team-tint, #F3F8F4) !important;
+    border: 1px solid rgba(21, 48, 31, 0.08) !important;
+    border-left: 5px solid var(--team-edge, #1E7A46) !important;
+    border-radius: 16px !important;
 }
-[class*="st-key-sqtgt-off-"] button p::before {
-    content: ""; display: inline-block; width: 0.75rem; height: 0.75rem;
-    border-radius: 50%; margin-right: 0.45rem; vertical-align: -0.05rem;
-    background: var(--team, #1E7A46); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+[class*="st-key-sqtray-"] .pk-builder-label { margin-top: 0.1rem; }
+/* Team picker: a segmented "shirt switch" - a track with one tab per team,
+   the active tab lifted as a white card. Looks like a mode, not a player. */
+[class*="st-key-sqtargets-"] {
+    background: rgba(21, 48, 31, 0.07); border-radius: 14px; padding: 4px;
+    gap: 4px !important; width: fit-content; max-width: 100%;
 }
+[class*="st-key-sqtgt-"] button {
+    min-height: 2.6rem; padding: 0.25rem 0.9rem 0.25rem 0.6rem; border-radius: 11px;
+}
+[class*="st-key-sqtgt-"] button p {
+    display: flex; align-items: center; font-size: 0.92rem; font-weight: 700; color: inherit;
+}
+[class*="st-key-sqtgt-"] button p::before {
+    content: ""; width: 1.5rem; height: 1.5rem; margin-right: 0.45rem; flex: 0 0 auto;
+    background: var(--jersey) center / contain no-repeat;
+}
+[class*="st-key-sqtgt-off-"] button,
 [class*="st-key-sqtgt-off-"] button:hover,
-[class*="st-key-sqtgt-off-"] button:focus:not(:active) {
-    background: #FFFFFF; color: #15301F; border-color: var(--team, #1E7A46);
+[class*="st-key-sqtgt-off-"] button:focus:not(:active),
+[class*="st-key-sqtgt-off-"] button:active {
+    background: transparent; color: #67705F; border: 1.5px solid transparent; box-shadow: none;
+}
+[class*="st-key-sqtgt-off-"] button p::before { opacity: 0.55; }
+@media (hover: hover) {
+    [class*="st-key-sqtgt-off-"] button:hover { background: rgba(255, 255, 255, 0.7); color: #15301F; }
+}
+/* Phones: three equal tabs in one row, shirt above name and count */
+@media (max-width: 640px) {
+    [class*="st-key-sqtargets-"] { width: 100%; flex-wrap: nowrap !important; }
+    [class*="st-key-sqtgt-"] { flex: 1 1 0; min-width: 0; width: auto !important; }
+    [class*="st-key-sqtgt-"] button { width: 100%; padding: 0.35rem 0.25rem; }
+    [class*="st-key-sqtgt-"] button p {
+        flex-direction: column; text-align: center; white-space: normal;
+        line-height: 1.2; font-size: 0.82rem;
+    }
+    [class*="st-key-sqtgt-"] button p::before { margin: 0 0 0.15rem; }
+}
+[class*="st-key-sqtgt-on-"] button,
+[class*="st-key-sqtgt-on-"] button:hover,
+[class*="st-key-sqtgt-on-"] button:focus:not(:active),
+[class*="st-key-sqtgt-on-"] button:active {
+    background: #FFFFFF; color: #15301F;
+    border: 1.5px solid var(--team-edge, #1E7A46);
+    box-shadow: 0 1px 2px rgba(20, 32, 26, 0.10), 0 3px 10px rgba(20, 32, 26, 0.08);
 }
 /* Team count picker */
 [class*="st-key-sqcnt-"] button { min-height: 2.1rem; padding: 0.2rem 0.85rem; border-radius: 999px; }
@@ -381,22 +426,38 @@ footer { visibility: hidden; }
 """
 
 
+def _tint(hex_color: str, amount: float) -> str:
+    """hex_color mixed into white (amount = share of the colour)."""
+    h = hex_color.lstrip("#")
+    rgb = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+    return "#" + "".join(f"{round(255 - (255 - c) * amount):02X}" for c in rgb)
+
+
 def _team_css() -> str:
-    """Shirt-colour rules for the squad builder's chips and team boxes."""
+    """Shirt-colour rules for the squad builder: member chips, team boxes, the
+    shirt switch and the pool tray."""
     rules = []
     for color, hex_color in TEAM_COLOR_HEX.items():
         slug = color_slug(color)
-        text = "#1F1F1F" if is_light(hex_color) else "#FFFFFF"
-        edge = "#8B968A" if is_light(hex_color) else hex_color
-        filled = ", ".join(
-            f'[class*="st-key-{prefix}-{slug}-"] button{state}'
-            for prefix in ("sqm", "sqtgt-on")
+        light = is_light(hex_color)
+        text = "#1F1F1F" if light else "#FFFFFF"
+        edge = "#8B968A" if light else hex_color
+        tint = "#F7F8F5" if light else _tint(hex_color, 0.07)
+        # As an image (not inline HTML) the SVG needs its namespace
+        svg = graphics.jersey(hex_color, None, 26).replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ', 1)
+        jersey = "data:image/svg+xml," + quote(svg)
+        members = ", ".join(
+            f'[class*="st-key-sqm-{slug}-"] button{state}'
             for state in ("", ":hover", ":focus:not(:active)", ":active")
         )
         rules.append(
-            f'[class*="st-key-sqteam-{slug}-"], [class*="st-key-sqtgt-off-{slug}-"] {{ --team: {hex_color}; }}\n'
-            f"{filled} {{ background: {hex_color}; color: {text}; border: 1.5px solid {edge}; }}\n"
-            f'[class*="st-key-sqtgt-on-{slug}-"] button {{ box-shadow: 0 0 0 3px {hex_color}40; }}'
+            f'[class*="st-key-sqteam-{slug}-"] {{ --team: {hex_color}; }}\n'
+            f"{members} {{ background: {hex_color}; color: {text}; border: 1.5px solid {edge}; }}\n"
+            f'[class*="st-key-sqtgt-on-{slug}-"], [class*="st-key-sqtgt-off-{slug}-"] {{ --jersey: url("{jersey}"); }}\n'
+            f'[class*="st-key-sqtgt-on-{slug}-"] {{ --team-edge: {edge}; }}\n'
+            f'[class*="st-key-sqtray-{slug}-"] {{ --team-edge: {edge}; --team-tint: {tint}; }}\n'
+            # The team a tapped player goes to glows in its colour
+            f'[class*="st-key-sqteam-{slug}-on-"] {{ box-shadow: 0 0 0 3px {hex_color}38, 0 8px 22px {hex_color}22; }}'
         )
     return "<style>\n" + "\n".join(rules) + "\n</style>"
 

@@ -210,21 +210,27 @@ def _builder(db, game, players: list, user: dict, admin: bool,
         )
 
     if pool:
-        ui.builder_label(f"Do rozdzielenia · {len(pool)}")
-        st.caption("Wybierz drużynę i klikaj graczy — trafią do niej. Resztę możesz wylosować.")
-        with st.container(horizontal=True, key=f"sqtargets-{gid}"):
-            for color, names in teams.items():
-                on = color == state["active"]
-                st.button(
-                    f"{color.capitalize()} · {len(names)}/{targets[color]}",
-                    key=f"sqtgt-{'on' if on else 'off'}-{ui.color_slug(color)}-{gid}",
-                    icon=":material/check:" if on else None,
-                    on_click=_target,
-                    args=(state, color),
-                )
-        with st.container(horizontal=True, key=f"sqpool-{gid}"):
-            for player in pool:
-                st.button(player, key=f"sqp-{gid}-{player}", on_click=_pick, args=(state, player))
+        # The pool is a tray tinted with the active team's colour, the team
+        # picker a shirt switch on top of it - so picking a team reads as a
+        # mode, not as one more player.
+        with st.container(border=True, key=f"sqtray-{ui.color_slug(state['active'])}-{gid}"):
+            ui.builder_label("Dodajesz do")
+            with st.container(horizontal=True, key=f"sqtargets-{gid}"):
+                for color, names in teams.items():
+                    on = color == state["active"]
+                    st.button(
+                        f"{color.capitalize()} {len(names)}/{targets[color]}",
+                        key=f"sqtgt-{'on' if on else 'off'}-{ui.color_slug(color)}-{gid}",
+                        on_click=_target,
+                        args=(state, color),
+                    )
+            ui.builder_label(f"Do rozdzielenia · {len(pool)}")
+            with st.container(horizontal=True, key=f"sqpool-{gid}"):
+                for player in pool:
+                    st.button(
+                        player, key=f"sqp-{gid}-{player}", icon=":material/add:",
+                        on_click=_pick, args=(state, player),
+                    )
     else:
         st.caption(":material/check_circle: Wszyscy grający są w drużynach")
 
@@ -243,7 +249,8 @@ def _builder(db, game, players: list, user: dict, admin: bool,
 
     for col, (color, names) in zip(st.columns(len(teams)), teams.items()):
         slug = ui.color_slug(color)
-        with col, st.container(border=True, key=f"sqteam-{slug}-{gid}"):
+        here = "on" if pool and color == state["active"] else "off"
+        with col, st.container(border=True, key=f"sqteam-{slug}-{here}-{gid}"):
             ui.builder_team_head(color, len(names), targets[color])
             if names:
                 with st.container(horizontal=True, key=f"sqmembers-{slug}-{gid}"):
