@@ -9,8 +9,6 @@ from src.game_config import TEAM_CONFIGS
 
 # Team counts the builder offers (e.g. [2, 3]).
 TEAM_COUNTS = sorted({config["teams"] for config in TEAM_CONFIGS.values()})
-# Without saved squads, players beyond the largest lineup wait on the bench.
-MAX_PLAYERS = max(TEAM_CONFIGS)
 # Display order of shirt colours: as listed in the lineup with the most teams.
 _COLOR_ORDER = [
     color
@@ -28,19 +26,28 @@ def team_colors(team_count: int) -> list:
     return []
 
 
+def _lineups(team_count: int) -> list:
+    return [n for n, config in TEAM_CONFIGS.items() if config["teams"] == team_count]
+
+
+def minimum(team_count: int) -> int:
+    """Fewest players a game with this many teams needs: its smallest
+    configured lineup."""
+    return min(_lineups(team_count))
+
+
 def capacity(team_count: int) -> int:
     """Most players a game with this many teams takes: its largest configured
     lineup. Later signups wait on the bench."""
-    return max(n for n, config in TEAM_CONFIGS.items() if config["teams"] == team_count)
+    return max(_lineups(team_count))
 
 
 def default_team_count(players_count: int) -> int:
-    """The configured team count for exactly this many players; otherwise the
-    fewest teams that fit everyone, or the biggest format when nobody fits."""
-    if players_count in TEAM_CONFIGS:
-        return TEAM_CONFIGS[players_count]["teams"]
-    fitting = [k for k in TEAM_COUNTS if capacity(k) >= players_count]
-    return fitting[0] if fitting else max(TEAM_COUNTS, key=capacity)
+    """The most teams there are enough players for (e.g. 15-17 players: two
+    teams and a bench, as three teams need 18); the smallest format when there
+    are too few even for that."""
+    enough = [k for k in TEAM_COUNTS if minimum(k) <= players_count]
+    return max(enough) if enough else min(TEAM_COUNTS)
 
 
 def split_bench(players: list, team_count: int):
@@ -113,7 +120,8 @@ def lineups_with_bench(teams: dict, players: list):
 
 def bench_for(players: list, teams: dict) -> list:
     """Reserves of a game in queue order: per the saved squads when there are
-    any, otherwise everyone beyond the largest lineup."""
+    any, otherwise beyond the limit of the default format for this many
+    players."""
     if teams:
         return lineups_with_bench(teams, players)[1]
-    return players[MAX_PLAYERS:]
+    return split_bench(players, default_team_count(len(players)))[1]

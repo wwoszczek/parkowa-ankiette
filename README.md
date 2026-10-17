@@ -23,8 +23,10 @@ free-tier friendly.
 - **First come, first served**: the account that approves a game's squads
   owns them. Everyone sees them; only the owner (or an admin) can edit or
   delete them, and once deleted anyone can set new ones
-- Formats come from `game_consts.yaml`: **2 teams** (czerwona, czarna, up to
-  14 players) or **3 teams** (biała, czerwona, czarna, up to 18)
+- Formats come from `game_consts.yaml`: **2 teams** (czerwona, czarna,
+  12–14 players) or **3 teams** (biała, czerwona, czarna, needs 18). The
+  builder picks the most teams there are enough players for: 15–17 signups
+  means 2 teams of 7 and the rest on the bench
 - Opens at a configured time window; admins can set squads any time
 
 ### Reserve bench

@@ -17,13 +17,13 @@ from src.utils.datetime_utils import format_game_date, is_draw_time_allowed, par
 from src.utils.game_utils import get_active_games
 from src.utils.signup_utils import get_signups_for_game, resolve_account_names
 from src.utils.team_utils import (
-    MAX_PLAYERS,
     TEAM_COUNTS,
     bench_for,
     capacity,
     default_team_count,
     fill_randomly,
     lineups_with_bench,
+    minimum,
     split_bench,
     team_colors,
     team_targets,
@@ -149,6 +149,13 @@ def _team_word(n: int) -> str:
     return "drużyny" if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14) else "drużyn"
 
 
+def _format_label(count: int) -> str:
+    """'2 drużyny · 12–14 graczy' / '3 drużyny · 18 graczy'."""
+    low, high = minimum(count), capacity(count)
+    players = f"{high}" if low == high else f"{low}–{high}"
+    return f"{count} {_team_word(count)} · {players} graczy"
+
+
 @st.fragment
 def _builder(db, game, players: list, user: dict, admin: bool,
              saved: dict | None = None, mine: bool = False, owner_name: str | None = None):
@@ -187,12 +194,20 @@ def _builder(db, game, players: list, user: dict, admin: bool,
             for count in TEAM_COUNTS:
                 on = count == state["count"]
                 st.button(
-                    f"{count} {_team_word(count)} · do {capacity(count)} graczy",
+                    _format_label(count),
                     key=f"sqcnt-{'on' if on else 'off'}-{count}-{gid}",
                     icon=":material/check:" if on else None,
                     on_click=_set_count,
                     args=(state, count),
+                    # A format needs its minimum, except the smallest one,
+                    # which stays available however few players there are.
+                    disabled=not on and count != min(TEAM_COUNTS) and len(players) < minimum(count),
                 )
+    if len(players) < minimum(state["count"]):
+        st.caption(
+            f":material/info: Na pełne składy potrzeba co najmniej {minimum(state['count'])} "
+            f"graczy, na liście jest {len(players)} — możesz je ustalić mimo to."
+        )
 
     if pool:
         ui.builder_label(f"Do rozdzielenia · {len(pool)}")
@@ -327,7 +342,7 @@ def _no_squads(db, game, players, user, admin):
     ui.empty_state("Składów jeszcze nie ma", hint)
     ui.bench_card(
         bench_for(players, {}),
-        f"Zapisali się ponad limit {MAX_PLAYERS} graczy. {BENCH_HINT}",
+        f"Zapisali się ponad limit {capacity(default_team_count(len(players)))} graczy. {BENCH_HINT}",
     )
     if not user:
         st.caption("Zaloguj się na stronie Zapisy, aby móc ustalić składy")

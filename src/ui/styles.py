@@ -285,6 +285,7 @@ footer { visibility: hidden; }
 [class*="st-key-sqcnt-off-"] button { background: #FFFFFF; color: #3A463E; border: 1.5px solid #DCE3D6; }
 [class*="st-key-sqcnt-off-"] button:hover,
 [class*="st-key-sqcnt-off-"] button:focus:not(:active) { background: #FFFFFF; color: #15301F; border-color: #1E7A46; }
+[class*="st-key-sqcnt-off-"] button:disabled { opacity: 0.45; border-color: #DCE3D6; color: #3A463E; }
 [class*="st-key-sqcnt-on-"] button,
 [class*="st-key-sqcnt-on-"] button:hover,
 [class*="st-key-sqcnt-on-"] button:focus:not(:active),

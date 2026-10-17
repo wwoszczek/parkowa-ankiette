@@ -35,8 +35,10 @@ guests:
 # ===== TEAMS CONFIGURATION =====
 # Lineups per player count, used by the squad builder: team colours, target
 # team sizes when filling at random, and the team counts it offers (2 or 3).
-# The largest count per team count is that format's limit - with more players
-# signed up, the latest signups wait on the reserve bench.
+# Per team count, the smallest player count is the minimum that format needs
+# (3 teams: 18) and the largest is its limit - with more players signed up,
+# the latest signups wait on the reserve bench. The builder defaults to the
+# most teams there are enough players for (15-17 players: 2 teams + bench).
 teams:
   12:
     count: 2
