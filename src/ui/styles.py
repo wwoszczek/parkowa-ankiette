@@ -441,8 +441,10 @@ def _team_css() -> str:
         slug = color_slug(color)
         light = is_light(hex_color)
         text = "#1F1F1F" if light else "#FFFFFF"
-        edge = "#8B968A" if light else hex_color
-        tint = "#F7F8F5" if light else _tint(hex_color, 0.07)
+        # A white shirt vanishes on the light UI - its accents use the darker
+        # outline colour instead
+        edge = "#7A8578" if light else hex_color
+        tint = "#F1F3EE" if light else _tint(hex_color, 0.07)
         # As an image (not inline HTML) the SVG needs its namespace
         svg = graphics.jersey(hex_color, None, 26).replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ', 1)
         jersey = "data:image/svg+xml," + quote(svg)
@@ -457,7 +459,7 @@ def _team_css() -> str:
             f'[class*="st-key-sqtgt-on-{slug}-"] {{ --team-edge: {edge}; }}\n'
             f'[class*="st-key-sqtray-{slug}-"] {{ --team-edge: {edge}; --team-tint: {tint}; }}\n'
             # The team a tapped player goes to glows in its colour
-            f'[class*="st-key-sqteam-{slug}-on-"] {{ box-shadow: 0 0 0 3px {hex_color}38, 0 8px 22px {hex_color}22; }}'
+            f'[class*="st-key-sqteam-{slug}-on-"] {{ box-shadow: 0 0 0 3px {edge}38, 0 8px 22px {edge}22; }}'
         )
     return "<style>\n" + "\n".join(rules) + "\n</style>"
 
