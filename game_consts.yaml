@@ -33,7 +33,12 @@ guests:
   max_per_user: 5
 
 # ===== TEAMS CONFIGURATION =====
-# Configuration for automatic team drawing for different player counts
+# Lineups per player count, used by the squad builder: team colours, target
+# team sizes when filling at random, and the team counts it offers (2 or 3).
+# Per team count, the smallest player count is the minimum that format needs
+# (3 teams: 18) and the largest is its limit - with more players signed up,
+# the latest signups wait on the reserve bench. The builder defaults to the
+# most teams there are enough players for (15-17 players: 2 teams + bench).
 teams:
   12:
     count: 2
@@ -49,10 +54,6 @@ teams:
     count: 3
     colors: ["biała", "czerwona", "czarna"]
     players_per_team: [6, 6, 6]
-
-# ===== MESSAGES =====
-messages:
-  manual_draw: "**LOSOWANIE MUSI ODBYĆ SIĘ RĘCZNIE, NIETYPOWA LICZBA UCZESTNIKÓW**"
 
 # DAY NAMES (nominative + accusative, e.g. "w środę")
 day_names: ["poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota", "niedziela"]

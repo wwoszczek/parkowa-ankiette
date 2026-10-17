@@ -60,26 +60,30 @@ def account_display_name(db: SupabaseDB, game_id: str, email: str, account_name:
 def resolve_adder_names(db: SupabaseDB, signups: list) -> dict:
     """Map added_by_email (lowercased) -> display label for every guest's adder,
     so the list can always show who added a guest - even when that account is
-    not itself on this game's list. Falls back across games, then to the e-mail
-    local part."""
-    guest_emails = {
-        s["added_by_email"].lower()
-        for s in signups
-        if s.get("is_guest") and s.get("added_by_email")
-    }
-    if not guest_emails:
+    not itself on this game's list."""
+    return resolve_account_names(db, signups, [
+        s["added_by_email"] for s in signups if s.get("is_guest") and s.get("added_by_email")
+    ])
+
+
+def resolve_account_names(db: SupabaseDB, signups: list, emails) -> dict:
+    """Map e-mails (lowercased) -> display label: the account's nickname on this
+    game's list, else the latest one it used in any game, else the e-mail local
+    part."""
+    wanted = {e.lower() for e in emails if e}
+    if not wanted:
         return {}
 
     names = {}
-    # 1) adder is signed up in THIS game -> their current nickname
+    # 1) account is signed up in THIS game -> its current nickname
     for s in signups:
         if not s.get("is_guest") and s.get("user_email"):
             email = s["user_email"].lower()
-            if email in guest_emails:
+            if email in wanted:
                 names[email] = s["nickname"]
 
-    # 2) otherwise -> most recent nickname the adder used in any game
-    missing = [e for e in guest_emails if e not in names]
+    # 2) otherwise -> most recent nickname the account used in any game
+    missing = [e for e in wanted if e not in names]
     if missing:
         try:
             rows = db.execute_query(
@@ -95,7 +99,7 @@ def resolve_adder_names(db: SupabaseDB, signups: list) -> dict:
             pass
 
     # 3) still unknown -> e-mail local part
-    for email in guest_emails:
+    for email in wanted:
         names.setdefault(email, email.split("@")[0])
 
     return names

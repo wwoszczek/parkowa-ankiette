@@ -1,7 +1,8 @@
 # Parkowa - Weekly Football Games
 
-Streamlit app for organizing weekly pickup football: signups, random team
-drawing and game history. Polish UI, Supabase PostgreSQL, free-tier friendly.
+Streamlit app for organizing weekly pickup football: signups, a squad builder
+with a reserve bench, and game history. Polish UI, Supabase PostgreSQL,
+free-tier friendly.
 
 ## Features
 
@@ -12,17 +13,33 @@ drawing and game history. Polish UI, Supabase PostgreSQL, free-tier friendly.
   (configurable limit per user); only the adder or an admin can remove them
 - Self sign-out at any time; admins can remove any entry
 
-### Team drawing
-- Automatic split based on player count (configured in `game_consts.yaml`):
-  - **12 / 14 players** → 2 teams (czerwona, czarna)
-  - **18 players** → 3 teams (biała, czerwona, czarna)
-- Drawing opens at a configured time window; admins can (re)draw any time
-- Optional **shirt-colour pins**: before drawing, fix specific players to a team colour (for people who only own one colour); the rest are shuffled into remaining slots
-- Other counts → manual draw message
+### Squad builder
+- Squads are set **by hand**: pick a team, tap players to put them in it
+  (tap a player in a team to take them out). Placing someone by hand is also
+  how shirt constraints work (a player who only owns one colour)
+- **Losuj resztę** randomly fills the open places around the hand-picked
+  core, balancing team sizes; clicked again (**Przelosuj**) it re-rolls only
+  the random part. Nothing is saved until the setter clicks **Zatwierdź składy**
+- **First come, first served**: the account that approves a game's squads
+  owns them. Everyone sees them; only the owner (or an admin) can edit or
+  delete them, and once deleted anyone can set new ones
+- Formats come from `game_consts.yaml`: **2 teams** (czerwona, czarna,
+  12–14 players) or **3 teams** (biała, czerwona, czarna, needs 18). The
+  builder picks the most teams there are enough players for: 15–17 signups
+  means 2 teams of 7 and the rest on the bench
+- Opens at a configured time window; admins can set squads any time
+
+### Reserve bench
+- Signups beyond the chosen format's limit wait on the **ławka rezerwowych**
+  (one bench per game, not per team), in signup order - marked on the signup
+  list and shown under the squads
+- When a squad player signs out, the first reserve automatically takes the
+  freed place (shown as "z ławki · za …") until the owner edits the squads
+- Stats count reserves who stayed on the bench as signups, not games played
 
 ### History
-- Archive of past games: pick a game, see players and drawn teams instantly
-- Stat chips show player count and number of teams drawn
+- Archive of past games: pick a game, see players, squads and the bench
+- Stat chips show player count and number of teams
 
 ### Automatic game management
 - **GitHub Actions scheduler** (`.github/workflows/scheduler.yml`) creates the
@@ -34,7 +51,7 @@ drawing and game history. Polish UI, Supabase PostgreSQL, free-tier friendly.
 | URL | Page |
 |---|---|
 | `/` | signup form + live player list |
-| `/teams` | drawn teams + draw controls |
+| `/teams` | squad builder + saved squads and bench |
 | `/history` | past games archive |
 | `/stats` | most active players by season — podium + full ranking |
 
@@ -57,6 +74,12 @@ The schema already lives in the production Supabase project. Connection
 string goes to `.env` (`SUPABASE_DATABASE_URL=...`) or
 `.streamlit/secrets.toml` (`[supabase] database_url`).
 
+Squad ownership needs one column on `teams` (run once in the SQL editor):
+
+```sql
+ALTER TABLE teams ADD COLUMN IF NOT EXISTS created_by_email TEXT;
+```
+
 ### 3. Login (Google)
 
 Create an OAuth client in Google Cloud Console (Web application, redirect
@@ -64,7 +87,7 @@ URI `https://<app>.streamlit.app/oauth2callback` and
 `http://localhost:8501/oauth2callback`), then fill the secrets:
 
 ```toml
-admin_emails = ["..."]            # admins: remove anyone, draw any time
+admin_emails = ["..."]            # admins: remove anyone, manage any squads any time
 
 [auth]
 redirect_uri = "https://<app>.streamlit.app/oauth2callback"
@@ -108,7 +131,7 @@ game:                                     # Wednesday 18:30
   time_changes:                           # optional: new start time from a date on
     - { from: 2026-11-01, hour: 19, minute: 30 }
 signup: { day: 6, hour: 10, minute: 0 }   # opens Sunday 10:00
-draw:   { day: 2, hour: 8,  minute: 0 }   # draw from Wednesday 8:00
+draw:   { day: 2, hour: 8,  minute: 0 }   # squads can be set from Wednesday 8:00
 guests: { max_per_user: 5 }
 ```
 

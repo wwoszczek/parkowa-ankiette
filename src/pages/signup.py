@@ -33,6 +33,8 @@ from src.utils.signup_utils import (
     remove_signup,
     resolve_adder_names,
 )
+from src.utils.team_utils import bench_for
+from src.utils.teams_db import get_teams_for_game, squads_of
 
 
 def _select_game(games):
@@ -198,11 +200,17 @@ def signup_page():
     game = _select_game(games)
     game_dt = parse_game_time(game["start_time"])
     signups = get_signups_for_game(db, game["id"])
+    bench = bench_for(
+        [s["nickname"] for s in signups], squads_of(get_teams_for_game(db, game["id"]))
+    )
 
     user = get_current_user()
     email = user["email"] if user else None
 
-    ui.hero(game_dt, chips=[ui.pl_players(len(signups))])
+    ui.hero(
+        game_dt,
+        chips=[ui.pl_players(len(signups)), f"{len(bench)} na ławce" if bench else None],
+    )
 
     # Signup panel first (left on desktop, on top when columns stack on mobile),
     # player list second (right on desktop, below on mobile).
@@ -226,7 +234,7 @@ def signup_page():
             adder_names[user["email"].lower()] = account_display_name(
                 db, game["id"], user["email"], user["name"]
             )
-        ui.players_table(signups, current_email=email, adder_names=adder_names)
+        ui.players_table(signups, current_email=email, adder_names=adder_names, bench=bench)
         if user:
             _name_control(db, game, user)
 

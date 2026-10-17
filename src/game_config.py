@@ -52,17 +52,12 @@ for players_count, config in _config['teams'].items():
         "players_per_team": config['players_per_team']
     }
 
-ALLOWED_PLAYER_COUNTS = sorted(TEAM_CONFIGS.keys())
-
-# ===== MESSAGES =====
-MANUAL_DRAW_MESSAGE = _config['messages']['manual_draw']
-
 # Day names: nominative ("środa") and accusative ("w środę")
 DAY_NAMES = _config['day_names']
 DAY_NAMES_ACCUSATIVE = _config.get('day_names_accusative', DAY_NAMES)
 
 DRAW_OPENING_MESSAGE = (
-    f"Losowanie składów otwiera się w {DAY_NAMES_ACCUSATIVE[DRAW_ALLOWED_DAY]} "
+    f"Ustalanie składów otwiera się w {DAY_NAMES_ACCUSATIVE[DRAW_ALLOWED_DAY]} "
     f"o {DRAW_ALLOWED_HOUR:02d}:{DRAW_ALLOWED_MINUTE:02d}"
 )
 

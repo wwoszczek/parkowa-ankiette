@@ -9,7 +9,8 @@ from src.ui import components as ui
 from src.utils.datetime_utils import format_game_date, parse_game_time
 from src.utils.game_utils import get_past_games
 from src.utils.signup_utils import get_signups_for_game, resolve_adder_names
-from src.utils.teams_db import get_teams_for_game
+from src.utils.team_utils import lineups_with_bench
+from src.utils.teams_db import get_teams_for_game, squads_of
 
 
 def history_page():
@@ -39,9 +40,12 @@ def history_page():
         (len(teams) if teams else "—", "drużyny"),
     ])
 
+    bench = []
     if teams:
+        lineups, bench = lineups_with_bench(squads_of(teams), [s["nickname"] for s in signups])
         ui.section("Składy")
-        ui.team_cards({t["team_color"]: t["players"] for t in teams})
+        ui.team_cards(lineups)
+        ui.bench_card(bench)
 
     ui.section("Lista zapisanych")
-    ui.players_table(signups, adder_names=resolve_adder_names(db, signups))
+    ui.players_table(signups, adder_names=resolve_adder_names(db, signups), bench=bench)
