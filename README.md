@@ -27,7 +27,7 @@ free-tier friendly.
   12–14 players) or **3 teams** (biała, czerwona, czarna, needs 18). The
   builder picks the most teams there are enough players for: 15–17 signups
   means 2 teams of 7 and the rest on the bench
-- Opens at a configured time window; admins can set squads any time
+- Can be set any time once signups are open
 
 ### Reserve bench
 - Signups beyond the chosen format's limit wait on the **ławka rezerwowych**
@@ -131,7 +131,6 @@ game:                                     # Wednesday 18:30
   time_changes:                           # optional: new start time from a date on
     - { from: 2026-11-01, hour: 19, minute: 30 }
 signup: { day: 6, hour: 10, minute: 0 }   # opens Sunday 10:00
-draw:   { day: 2, hour: 8,  minute: 0 }   # squads can be set from Wednesday 8:00
 guests: { max_per_user: 5 }
 ```
 

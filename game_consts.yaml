@@ -21,12 +21,6 @@ signup:
   hour: 10
   minute: 0
 
-# ===== DRAW TEAMS =====
-draw:
-  day: 2  # wednesday
-  hour: 8
-  minute: 0
-
 # ===== GUESTS =====
 # Signed-in users can add this many guests (friends without an account).
 guests:

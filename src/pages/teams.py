@@ -10,10 +10,10 @@ the reserve bench and step into freed places in signup order.
 import streamlit as st
 
 from src.config import init_database
-from src.game_config import DRAW_OPENING_MESSAGE, SIGNUP_OPENING_MESSAGE
+from src.game_config import SIGNUP_OPENING_MESSAGE
 from src.ui import components as ui
 from src.utils.auth import get_current_user, is_admin
-from src.utils.datetime_utils import format_game_date, is_draw_time_allowed, parse_game_time
+from src.utils.datetime_utils import format_game_date, parse_game_time
 from src.utils.game_utils import get_active_games
 from src.utils.signup_utils import get_signups_for_game, resolve_account_names
 from src.utils.team_utils import (
@@ -332,26 +332,22 @@ def _saved_view(db, game, signups, players, rows, user, admin, owner_name):
 
 def _no_squads(db, game, players, user, admin):
     gid = game["id"]
-    can_build = bool(user) and (is_draw_time_allowed() or admin)
-    if can_build and players and st.session_state.get(f"sq_open_{gid}"):
+    # Squads can be set any time the game is open for signups
+    if user and players and st.session_state.get(f"sq_open_{gid}"):
         _builder(db, game, players, user, admin, None)
         return
 
     if not players:
         ui.empty_state("Lista jest pusta", "Składy będzie można ustalić, gdy ktoś się zapisze")
         return
-    hint = (
-        "Kto pierwszy ustali i zatwierdzi składy, ten nimi zarządza"
-        if can_build else DRAW_OPENING_MESSAGE
-    )
-    ui.empty_state("Składów jeszcze nie ma", hint)
+    ui.empty_state("Składów jeszcze nie ma", "Kto pierwszy ustali i zatwierdzi składy, ten nimi zarządza")
     ui.bench_card(
         bench_for(players, {}),
         f"Zapisali się ponad limit {capacity(default_team_count(len(players)))} graczy. {BENCH_HINT}",
     )
     if not user:
         st.caption("Zaloguj się na stronie Zapisy, aby móc ustalić składy")
-    elif can_build:
+    else:
         st.caption(f"Na liście: {ui.pl_players(len(players))}")
         if st.button("Ustal składy", type="primary", icon=":material/groups:", key=f"sqopen_{gid}", width="stretch"):
             st.session_state[f"sq_open_{gid}"] = True
