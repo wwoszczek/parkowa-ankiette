@@ -10,10 +10,10 @@ the reserve bench and step into freed places in signup order.
 import streamlit as st
 
 from src.config import init_database
-from src.game_config import DRAW_OPENING_MESSAGE, SIGNUP_OPENING_MESSAGE
+from src.game_config import SIGNUP_OPENING_MESSAGE
 from src.ui import components as ui
 from src.utils.auth import get_current_user, is_admin
-from src.utils.datetime_utils import format_game_date, is_draw_time_allowed, parse_game_time
+from src.utils.datetime_utils import format_game_date, parse_game_time
 from src.utils.game_utils import get_active_games
 from src.utils.signup_utils import get_signups_for_game, resolve_account_names
 from src.utils.team_utils import (
@@ -37,6 +37,9 @@ from src.utils.teams_db import (
 )
 
 BENCH_HINT = "Wejdą do gry w kolejności zapisów, jeśli ktoś z grających się wypisze"
+# New squads need at least the smallest configured lineup on the list (admins
+# excepted), so nobody locks the game's squads with a handful of early signups.
+MIN_TO_SET = minimum(min(TEAM_COUNTS))
 
 
 def _finish(ok: bool, message: str):
@@ -204,10 +207,14 @@ def _builder(db, game, players: list, user: dict, admin: bool,
                     disabled=not on and count != min(TEAM_COUNTS) and len(players) < minimum(count),
                 )
     if len(players) < minimum(state["count"]):
-        st.caption(
-            f":material/info: Na pełne składy potrzeba co najmniej {minimum(state['count'])} "
-            f"graczy, na liście jest {len(players)} — możesz je ustalić mimo to."
-        )
+        if not saved and not admin:
+            note = f"Składy można zatwierdzić od {MIN_TO_SET} graczy na liście — teraz jest {len(players)}."
+        else:
+            note = (
+                f"Na pełne składy potrzeba co najmniej {minimum(state['count'])} graczy, "
+                f"na liście jest {len(players)} — możesz je zatwierdzić mimo to."
+            )
+        st.caption(f":material/info: {note}")
 
     if pool:
         # The pool is a tray tinted with the active team's colour, the team
@@ -272,6 +279,8 @@ def _builder(db, game, players: list, user: dict, admin: bool,
         problems.append(f"Rozdziel jeszcze: {ui.pl_players(len(pool))}")
     if any(not names for names in teams.values()):
         problems.append("Każda drużyna musi mieć graczy")
+    if not saved and not admin and len(players) < MIN_TO_SET:
+        problems.append(f"Za mało graczy na liście (min. {MIN_TO_SET})")
     sizes = [len(names) for names in teams.values()]
     if not problems and max(sizes) - min(sizes) > 1:
         st.warning("Drużyny mają nierówną liczbę graczy: " + " / ".join(map(str, sizes)))
@@ -332,26 +341,27 @@ def _saved_view(db, game, signups, players, rows, user, admin, owner_name):
 
 def _no_squads(db, game, players, user, admin):
     gid = game["id"]
-    can_build = bool(user) and (is_draw_time_allowed() or admin)
-    if can_build and players and st.session_state.get(f"sq_open_{gid}"):
+    # Squads can be set any time the game is open for signups
+    if user and players and st.session_state.get(f"sq_open_{gid}"):
         _builder(db, game, players, user, admin, None)
         return
 
     if not players:
         ui.empty_state("Lista jest pusta", "Składy będzie można ustalić, gdy ktoś się zapisze")
         return
-    hint = (
-        "Kto pierwszy ustali i zatwierdzi składy, ten nimi zarządza"
-        if can_build else DRAW_OPENING_MESSAGE
-    )
-    ui.empty_state("Składów jeszcze nie ma", hint)
+    ui.empty_state("Składów jeszcze nie ma", "Kto pierwszy ustali i zatwierdzi składy, ten nimi zarządza")
     ui.bench_card(
         bench_for(players, {}),
         f"Zapisali się ponad limit {capacity(default_team_count(len(players)))} graczy. {BENCH_HINT}",
     )
     if not user:
         st.caption("Zaloguj się na stronie Zapisy, aby móc ustalić składy")
-    elif can_build:
+    elif len(players) < MIN_TO_SET and not admin:
+        st.caption(
+            f"Składy będzie można ustalić, gdy na liście będzie co najmniej {MIN_TO_SET} graczy "
+            f"— teraz jest {len(players)}."
+        )
+    else:
         st.caption(f"Na liście: {ui.pl_players(len(players))}")
         if st.button("Ustal składy", type="primary", icon=":material/groups:", key=f"sqopen_{gid}", width="stretch"):
             st.session_state[f"sq_open_{gid}"] = True

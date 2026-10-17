@@ -7,7 +7,6 @@ from src.constants import TIMEZONE
 from src.game_config import (
     GAME_DAY, GAME_START_HOUR, GAME_START_MINUTE, GAME_TIME_CHANGES,
     SIGNUP_OPEN_DAY, SIGNUP_OPEN_HOUR, SIGNUP_OPEN_MINUTE,
-    DRAW_ALLOWED_DAY, DRAW_ALLOWED_HOUR, DRAW_ALLOWED_MINUTE,
     DAY_NAMES,
 )
 
@@ -66,16 +65,6 @@ def get_last_signup_opening():
 
     last_opening = now - timedelta(days=days_back)
     return last_opening.replace(hour=SIGNUP_OPEN_HOUR, minute=SIGNUP_OPEN_MINUTE, second=0, microsecond=0)
-
-
-def is_draw_time_allowed():
-    """Checks if lineup draw time is allowed"""
-    now = datetime.now(TIMEZONE)
-    is_correct_day = now.weekday() == DRAW_ALLOWED_DAY
-    is_correct_time = now.hour >= DRAW_ALLOWED_HOUR or (
-        now.hour == DRAW_ALLOWED_HOUR and now.minute >= DRAW_ALLOWED_MINUTE
-    )
-    return is_correct_day and is_correct_time
 
 
 def format_game_date(dt, with_time=True):
