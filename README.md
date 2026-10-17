@@ -27,7 +27,9 @@ free-tier friendly.
   12–14 players) or **3 teams** (biała, czerwona, czarna, needs 18). The
   builder picks the most teams there are enough players for: 15–17 signups
   means 2 teams of 7 and the rest on the bench
-- Can be set any time once signups are open
+- Can be set any time once signups are open, as soon as at least 12 players
+  (the smallest lineup) are on the list - admins can set them with fewer;
+  saved squads can always be edited
 
 ### Reserve bench
 - Signups beyond the chosen format's limit wait on the **ławka rezerwowych**
