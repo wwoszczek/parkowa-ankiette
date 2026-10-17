@@ -257,8 +257,6 @@ def _builder(db, game, players: list, user: dict, admin: bool,
                         )
             else:
                 st.caption("Pusto — wybierz tę drużynę i klikaj graczy")
-    if state["random"]:
-        st.caption(":material/casino: wylosowani · kliknięcie gracza w drużynie zdejmuje go z niej")
 
     ui.bench_card(bench, f"Zapisali się ponad limit {len(state['playing'])} graczy. {BENCH_HINT}")
 
