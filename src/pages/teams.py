@@ -113,21 +113,16 @@ def _target(state: dict, color: str):
         state["active"] = color
 
 
-def _fill(state: dict):
-    """Dice the rest: everyone still in the pool, around the picked core."""
-    pool = _pool(state)
-    state["teams"] = fill_randomly(state["teams"], pool, list(state["targets"].values()))
-    state["random"] |= set(pool)
-
-
-def _reroll(state: dict):
-    """Throw the dice again for the randomly placed players only."""
+def _draw(state: dict):
+    """Dice everyone not placed by hand - the pool plus anyone an earlier draw
+    placed - around the hand-picked core."""
     state["teams"] = {
         color: [p for p in names if p not in state["random"]]
         for color, names in state["teams"].items()
     }
-    state["random"] = set()
-    _fill(state)
+    pool = _pool(state)
+    state["teams"] = fill_randomly(state["teams"], pool, list(state["targets"].values()))
+    state["random"] = set(pool)
 
 
 def _clear(state: dict):
@@ -201,7 +196,7 @@ def _builder(db, game, players: list, user: dict, admin: bool,
 
     if pool:
         ui.builder_label(f"Do rozdzielenia · {len(pool)}")
-        st.caption("Wybierz drużynę i klikaj graczy — trafią do niej. Resztę możesz dolosować.")
+        st.caption("Wybierz drużynę i klikaj graczy — trafią do niej. Resztę możesz wylosować.")
         with st.container(horizontal=True, key=f"sqtargets-{gid}"):
             for color, names in teams.items():
                 on = color == state["active"]
@@ -219,15 +214,13 @@ def _builder(db, game, players: list, user: dict, admin: bool,
         st.caption(":material/check_circle: Wszyscy grający są w drużynach")
 
     with st.container(horizontal=True, key=f"sqactions-{gid}"):
+        # One dice button: draws whoever is not placed by hand, so once used
+        # it re-rolls the random part and keeps the hand-picked core.
         st.button(
-            "Dolosuj resztę", icon=":material/casino:", key=f"sqfill-{gid}",
-            on_click=_fill, args=(state,), disabled=not pool,
+            "Przelosuj" if state["random"] else "Losuj resztę",
+            icon=":material/casino:", key=f"sqdraw-{gid}",
+            on_click=_draw, args=(state,), disabled=not (pool or state["random"]),
         )
-        if state["random"]:
-            st.button(
-                "Przelosuj dolosowanych", icon=":material/refresh:", key=f"sqreroll-{gid}",
-                on_click=_reroll, args=(state,),
-            )
         st.button(
             "Wyczyść", icon=":material/restart_alt:", key=f"sqclear-{gid}",
             on_click=_clear, args=(state,), disabled=len(pool) == len(state["playing"]),
@@ -250,7 +243,7 @@ def _builder(db, game, players: list, user: dict, admin: bool,
             else:
                 st.caption("Pusto — wybierz tę drużynę i klikaj graczy")
     if state["random"]:
-        st.caption(":material/casino: dolosowani · kliknięcie gracza w drużynie zdejmuje go z niej")
+        st.caption(":material/casino: wylosowani · kliknięcie gracza w drużynie zdejmuje go z niej")
 
     ui.bench_card(bench, f"Zapisali się ponad limit {len(state['playing'])} graczy. {BENCH_HINT}")
 

@@ -17,9 +17,9 @@ free-tier friendly.
 - Squads are set **by hand**: pick a team, tap players to put them in it
   (tap a player in a team to take them out). Placing someone by hand is also
   how shirt constraints work (a player who only owns one colour)
-- **Dolosuj resztę** randomly fills the open places around the hand-picked
-  core, balancing team sizes; **Przelosuj dolosowanych** re-rolls only the
-  random part. Nothing is saved until the setter clicks **Zatwierdź składy**
+- **Losuj resztę** randomly fills the open places around the hand-picked
+  core, balancing team sizes; clicked again (**Przelosuj**) it re-rolls only
+  the random part. Nothing is saved until the setter clicks **Zatwierdź składy**
 - **First come, first served**: the account that approves a game's squads
   owns them. Everyone sees them; only the owner (or an admin) can edit or
   delete them, and once deleted anyone can set new ones
