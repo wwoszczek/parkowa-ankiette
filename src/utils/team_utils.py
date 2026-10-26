@@ -9,6 +9,10 @@ from src.game_config import TEAM_CONFIGS
 
 # Team counts the builder offers (e.g. [2, 3]).
 TEAM_COUNTS = sorted({config["teams"] for config in TEAM_CONFIGS.values()})
+# The biggest game there can be (e.g. 18 for 3 x 6). Until squads are saved,
+# only signups beyond it are shown as reserves - below it more players are
+# still welcome, as they can make a bigger format.
+MAX_PLAYERS = max(TEAM_CONFIGS)
 # Display order of shirt colours: as listed in the lineup with the most teams.
 _COLOR_ORDER = [
     color
@@ -120,8 +124,7 @@ def lineups_with_bench(teams: dict, players: list):
 
 def bench_for(players: list, teams: dict) -> list:
     """Reserves of a game in queue order: per the saved squads when there are
-    any, otherwise beyond the limit of the default format for this many
-    players."""
+    any, otherwise everyone beyond the biggest game (MAX_PLAYERS)."""
     if teams:
         return lineups_with_bench(teams, players)[1]
-    return split_bench(players, default_team_count(len(players)))[1]
+    return players[MAX_PLAYERS:]

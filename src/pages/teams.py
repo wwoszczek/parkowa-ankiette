@@ -17,6 +17,7 @@ from src.utils.datetime_utils import format_game_date, parse_game_time
 from src.utils.game_utils import get_active_games
 from src.utils.signup_utils import get_signups_for_game, resolve_account_names
 from src.utils.team_utils import (
+    MAX_PLAYERS,
     TEAM_COUNTS,
     bench_for,
     capacity,
@@ -352,7 +353,7 @@ def _no_squads(db, game, players, user, admin):
     ui.empty_state("Składów jeszcze nie ma", "Kto pierwszy ustali i zatwierdzi składy, ten nimi zarządza")
     ui.bench_card(
         bench_for(players, {}),
-        f"Zapisali się ponad limit {capacity(default_team_count(len(players)))} graczy. {BENCH_HINT}",
+        f"Zapisali się ponad limit {MAX_PLAYERS} graczy. {BENCH_HINT}",
     )
     if not user:
         st.caption("Zaloguj się na stronie Zapisy, aby móc ustalić składy")

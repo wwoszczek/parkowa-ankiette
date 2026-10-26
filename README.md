@@ -33,7 +33,9 @@ free-tier friendly.
 
 ### Reserve bench
 - Signups beyond the chosen format's limit wait on the **ławka rezerwowych**
-  (one bench per game, not per team), in signup order - marked on the signup
+  (one bench per game, not per team), in signup order. Until squads are
+  saved, only signups beyond the biggest game (18) count as reserves, so the
+  list never says "full" while a bigger format still needs players - marked on the signup
   list and shown under the squads
 - When a squad player signs out, the first reserve automatically takes the
   freed place (shown as "z ławki · za …") until the owner edits the squads
