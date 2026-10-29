@@ -47,6 +47,16 @@ for players_count, config in _config['teams'].items():
         "players_per_team": config['players_per_team']
     }
 
+# ===== PLAYER CARDS =====
+_cards = {
+    "since": None, "bronze_share": 0.35, "silver_share": 0.35, "silver_games": 3, "gold_games": 8, "legend": 90,
+    "legend_streak": 4, "in_form_streak": 3, "in_form_chance": 0.75, "in_form_max": 3,
+    "toty_size": 3,
+    **(_config.get('cards') or {}),
+}
+CARDS_SINCE = date.fromisoformat(str(_cards["since"])) if _cards["since"] else None
+CARD_THRESHOLDS = {k: v for k, v in _cards.items() if k != "since"}
+
 # Day names: nominative ("środa") and accusative ("w środę")
 DAY_NAMES = _config['day_names']
 DAY_NAMES_ACCUSATIVE = _config.get('day_names_accusative', DAY_NAMES)

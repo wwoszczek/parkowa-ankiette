@@ -8,11 +8,12 @@ import streamlit as st
 
 from src.ui import graphics
 from src.ui.components import TEAM_COLOR_HEX, color_slug
+from src.ui.fut import SIZES, ring_css, shape_css
 from src.ui.graphics import is_light
 
 _CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Barlow+Condensed:wght@600;700;800&display=swap');
 
 /* Typography - restore icon fonts after the global override */
 * { font-family: 'Manrope', -apple-system, 'Segoe UI', sans-serif; }
@@ -426,6 +427,132 @@ footer { visibility: hidden; }
 """
 
 
+# FUT-style player cards (src/ui/fut.py): shield shape by clip-path, colours of
+# each card type as variables. Original designs in the FIFA 14-17 spirit.
+_FUT_CSS = """
+<style>
+.fc-wrap { display: inline-block; filter: drop-shadow(0 6px 14px rgba(20, 24, 20, 0.22)); }
+.fc {
+    position: relative; width: 186px; height: 300px; clip-path: var(--fc-shape);
+    background: var(--fc-bg); color: var(--fc-ink); overflow: hidden;
+    font-family: 'Barlow Condensed', 'Manrope', sans-serif;
+}
+.fc::before {  /* inner panel, inset parallel to the edge */
+    content: ""; position: absolute; inset: 0; clip-path: var(--fc-inset);
+    background: var(--fc-inner); pointer-events: none;
+}
+.fc > .fc-frame {  /* frame line around the inner panel */
+    position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    clip-path: var(--fc-ring); background: var(--fc-frame);
+}
+.fc::after {  /* shine */
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(120% 60% at 15% -5%, rgba(255, 255, 255, 0.55), transparent 55%),
+                linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.16) 48%, transparent 56%);
+}
+.fc > * { position: relative; z-index: 1; }
+.fc-top { display: flex; height: 150px; padding: 26px 10px 0 16px; }
+.fc-meta { width: 46px; display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative; z-index: 2; }
+.fc-ovr { font-size: 2.55rem; font-weight: 800; line-height: 0.9; }
+.fc-pos { font-size: 1rem; font-weight: 700; letter-spacing: 0.02em; padding-bottom: 3px;
+          border-bottom: 1px solid var(--fc-line); }
+.fc-club { margin-top: 5px; opacity: 0.85; display: flex; }
+.fc-club svg { display: block; }
+.fc-photo { flex: 1; display: flex; align-items: flex-end; justify-content: flex-end; overflow: hidden; }
+.fc-img {
+    width: 108px; height: 112px; object-fit: cover; border-radius: 10px 10px 0 0;
+    -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent);
+            mask-image: linear-gradient(to bottom, #000 72%, transparent);
+}
+.fc-silhouette { width: 104px; height: 104px; fill: currentColor; opacity: 0.32; display: block; }
+.fc-name {
+    margin: 2px 18px 6px; padding-bottom: 4px; border-bottom: 1px solid var(--fc-line);
+    text-align: center; font-size: 1.22rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fc-name-long { font-size: 1.02rem; }
+.fc-name-xlong { font-size: 0.9rem; }
+.fc-stats { display: flex; justify-content: center; padding: 0 14px; }
+.fc-col { display: flex; flex-direction: column; gap: 1px; }
+.fc-sep { width: 1px; background: var(--fc-line); margin: 2px 12px; }
+.fc-stat { display: flex; align-items: baseline; gap: 5px; line-height: 1.12; }
+.fc-stat b { font-size: 1.12rem; font-weight: 800; min-width: 1.35rem; text-align: right; }
+.fc-stat span { font-size: 0.92rem; font-weight: 600; opacity: 0.85; }
+/* Card types */
+.fc-bronze { --fc-ink: #3B2414; --fc-line: rgba(59, 36, 20, 0.35); --fc-frame: rgba(255, 228, 200, 0.6);
+    --fc-bg: linear-gradient(160deg, #E8BE94 0%, #B5804F 46%, #7E5130 100%);
+    --fc-inner: linear-gradient(160deg, rgba(255, 236, 214, 0.32), rgba(126, 81, 48, 0.12)); }
+.fc-silver { --fc-ink: #262B31; --fc-line: rgba(38, 43, 49, 0.3); --fc-frame: rgba(255, 255, 255, 0.85);
+    --fc-bg: linear-gradient(160deg, #FAFBFC 0%, #CBD2D9 45%, #8F99A3 100%);
+    --fc-inner: linear-gradient(160deg, rgba(255, 255, 255, 0.45), rgba(143, 153, 163, 0.12)); }
+.fc-gold { --fc-ink: #3A2C08; --fc-line: rgba(58, 44, 8, 0.32); --fc-frame: rgba(255, 249, 215, 0.85);
+    --fc-bg: linear-gradient(160deg, #FFF3BF 0%, #E8C766 40%, #B38A27 100%);
+    --fc-inner: linear-gradient(160deg, rgba(255, 250, 220, 0.4), rgba(179, 138, 39, 0.1)); }
+.fc-inform { --fc-ink: #F0CF6E; --fc-line: rgba(240, 207, 110, 0.38); --fc-frame: rgba(240, 207, 110, 0.6);
+    --fc-bg: linear-gradient(160deg, #4A4A4A 0%, #1B1B1B 50%, #050505 100%);
+    --fc-inner: repeating-linear-gradient(135deg, rgba(240, 207, 110, 0.06) 0 2px, transparent 2px 9px); }
+.fc-toty { --fc-ink: #F7D981; --fc-line: rgba(247, 217, 129, 0.42); --fc-frame: rgba(247, 217, 129, 0.8);
+    --fc-bg: linear-gradient(180deg, #1B4FBF 0%, #0D2C80 55%, #071A52 100%);
+    /* calm deep blue: a soft glow behind the player, a hint of gold at the foot */
+    --fc-inner: radial-gradient(70% 38% at 62% 30%, rgba(86, 150, 255, 0.45), transparent 72%),
+                linear-gradient(180deg, transparent 62%, rgba(247, 217, 129, 0.12) 100%); }
+.fc-toty::after { background: radial-gradient(120% 60% at 15% -5%, rgba(255, 255, 255, 0.22), transparent 55%); }
+.fc-legend { --fc-ink: #6A4F14; --fc-line: rgba(106, 79, 20, 0.35); --fc-frame: rgba(196, 157, 66, 0.75);
+    --fc-bg: linear-gradient(160deg, #FFFFFF 0%, #F5EEDC 45%, #D8C189 100%);
+    --fc-inner: linear-gradient(160deg, rgba(212, 175, 85, 0.0) 0%, rgba(212, 175, 85, 0.22) 100%); }
+.fc-guest { --fc-ink: #3A4048; --fc-line: rgba(58, 64, 72, 0.25); --fc-frame: rgba(255, 255, 255, 0.7);
+    --fc-bg: linear-gradient(160deg, #EEF0F2 0%, #C7CDD3 100%); --fc-inner: none; }
+/* Mini cards on the pitch */
+.fc-wrap-mini { display: inline-flex; flex-direction: column; align-items: center; }
+/* Rating and position in a left column, the photo in its own column right of it */
+.fc-mini { width: 84px; height: 116px; }
+.fc-mini .fc-meta { position: absolute; top: 13px; left: 6px; width: 27px; gap: 0; }
+.fc-mini .fc-ovr { font-size: 1.28rem; }
+.fc-mini .fc-pos { font-size: 0.58rem; border: none; padding: 0; }
+.fc-mini .fc-photo { position: absolute; top: 13px; left: 35px; right: 6px; height: 60px; }
+.fc-mini .fc-img { width: 43px; height: 48px; border-radius: 6px 6px 0 0; }
+.fc-mini .fc-silhouette { width: 43px; height: 43px; }
+.fc-mini .fc-name {
+    position: absolute; top: 76px; left: 6px; right: 6px; margin: 0; padding: 0 0 2px;
+    font-size: 0.68rem; letter-spacing: 0;
+}
+.fc-note {
+    margin-top: 2px; font: 700 0.62rem 'Manrope', sans-serif; color: #FFFFFF;
+    background: rgba(0, 0, 0, 0.45); border-radius: 999px; padding: 0 6px; white-space: nowrap;
+}
+/* Card grid (cards page) */
+.fc-solo { display: flex; justify-content: center; }
+.fc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 1.1rem 0.6rem; justify-items: center; margin: 0.6rem 0 1rem; }
+.fc-cell { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
+/* Squads on the pitch */
+.fc-squads { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 0.9rem; margin: 0.4rem 0 0.8rem; }
+.fc-squad { display: flex; flex-direction: column; background: #FFFFFF; border: 1px solid #E6E9E1; border-top: 4px solid var(--team); border-radius: 16px; overflow: hidden; }
+.fc-squad-head { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.85rem; font-weight: 800; color: #15301F; }
+.fc-team-jersey { display: flex; }
+.fc-team-jersey svg { display: block; }
+.fc-out { opacity: 0.4; filter: grayscale(1); }
+.fc-pitch {
+    position: relative; flex: 1; padding: 18px 8px 14px; display: flex; flex-direction: column; justify-content: space-around; gap: 10px;
+    background: repeating-linear-gradient(180deg, #2F8F4E 0 38px, #2A8246 38px 76px);
+}
+.fc-lines { position: absolute; inset: 8px; border: 2px solid rgba(255, 255, 255, 0.4); border-radius: 4px; pointer-events: none; }
+.fc-lines::before {  /* penalty box at the keeper's end */
+    content: ""; position: absolute; left: 22%; right: 22%; bottom: -2px; height: 17%;
+    border: 2px solid rgba(255, 255, 255, 0.4); border-bottom: none;
+}
+.fc-lines::after {  /* centre circle at the halfway line */
+    content: ""; position: absolute; left: 50%; top: -2px; width: 74px; height: 37px; transform: translateX(-50%);
+    border: 2px solid rgba(255, 255, 255, 0.4); border-top: none; border-radius: 0 0 74px 74px;
+}
+.fc-row { display: flex; justify-content: space-evenly; position: relative; z-index: 1; }
+@media (max-width: 640px) {
+    .fc-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+    .fc-grid .fc { transform: scale(0.86); transform-origin: top center; margin-bottom: -38px; }
+}
+</style>
+"""
+
+
 def _tint(hex_color: str, amount: float) -> str:
     """hex_color mixed into white (amount = share of the colour)."""
     h = hex_color.lstrip("#")
@@ -464,6 +591,18 @@ def _team_css() -> str:
     return "<style>\n" + "\n".join(rules) + "\n</style>"
 
 
+def _card_shape_css() -> str:
+    """Card outline and inner panel as px polygons for both card sizes, so the
+    inner frame is a true parallel inset (percent polygons on an inset box
+    are not, and drift at the corners)."""
+    rules = [
+        f".{cls} {{ --fc-shape: {shape_css(w, h)}; --fc-inset: {shape_css(w, h, inset)}; "
+        f"--fc-ring: {ring_css(w, h, inset, line)}; }}"
+        for cls, (w, h, inset, line) in (("fc", SIZES["full"]), ("fc.fc-mini", SIZES["mini"]))
+    ]
+    return "<style>\n" + "\n".join(rules) + "\n</style>"
+
+
 def inject_styles():
     """Inject the global stylesheet (call once per render, before page content)."""
-    st.markdown(_CSS + _team_css(), unsafe_allow_html=True)
+    st.markdown(_CSS + _team_css() + _card_shape_css() + _FUT_CSS, unsafe_allow_html=True)

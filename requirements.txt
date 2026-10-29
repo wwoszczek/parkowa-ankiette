@@ -2,6 +2,8 @@
 streamlit[auth]>=1.50.0   # [auth] = Authlib for st.login; 1.50+ for horizontal containers and button width
 httpx>=0.27               # required by Authlib's starlette OAuth client
 psycopg2-binary>=2.9.7
+numpy>=1.26               # player cards: the attendance ("forma") model
+Pillow>=10.0              # player cards: photo re-encoding
 python-dotenv>=1.0.0
 pytz>=2023.3
 PyYAML>=6.0.0

@@ -6,6 +6,7 @@ Secrets layout (Google OAuth setup is documented in README.md):
     [auth]            redirect_uri, cookie_secret
     [auth.google]     Google client + client_kwargs.prompt = "select_account"
     [auth.signout]    SAME Google client - distinct provider name, see below
+    [auth.card]       SAME Google client - opens "Twoja karta" (optional)
     [dev_user]        enabled, email, name   # local development only
 
 Why two provider sections for one Google client: session state does not
@@ -21,6 +22,8 @@ import streamlit as st
 
 # action -> provider section used for its login flow
 ACTION_PROVIDERS = {"signup": "google", "signout": "signout"}
+# A plain login from the cards page: no action, just back to the cards
+CARD_PROVIDER = "card"
 
 
 def auth_configured() -> bool:
@@ -96,6 +99,23 @@ def _claimed_logins() -> set:
     return set()
 
 
+def _claim_fresh(providers, max_age_seconds: int):
+    """The provider of a just-completed OAuth login if it is one of
+    `providers`, exactly once per login; otherwise None."""
+    age = _seconds_since_login()
+    if age is None or age > max_age_seconds:
+        return None
+    provider = getattr(st.user, "provider", None)
+    if provider not in providers:
+        return None
+    key = (st.user.email.lower(), str(provider), str(getattr(st.user, "iat", "")))
+    claimed = _claimed_logins()
+    if key in claimed:
+        return None
+    claimed.add(key)
+    return provider
+
+
 def claim_fresh_login(max_age_seconds: int = 45):
     """Return "signup"/"signout" exactly once for a just-completed OAuth login.
 
@@ -103,19 +123,23 @@ def claim_fresh_login(max_age_seconds: int = 45):
     cookie session), the provider is unknown, or this login was already
     handled. Never returns an action for the dev_user fake.
     """
-    age = _seconds_since_login()
-    if age is None or age > max_age_seconds:
-        return None
-    provider = getattr(st.user, "provider", None)
-    action = next((a for a, p in ACTION_PROVIDERS.items() if p == provider), None)
-    if action is None:
-        return None
-    key = (st.user.email.lower(), str(provider), str(getattr(st.user, "iat", "")))
-    claimed = _claimed_logins()
-    if key in claimed:
-        return None
-    claimed.add(key)
-    return action
+    provider = _claim_fresh(ACTION_PROVIDERS.values(), max_age_seconds)
+    return next((a for a, p in ACTION_PROVIDERS.items() if p == provider), None)
+
+
+def card_login_ready() -> bool:
+    return _provider_ready(CARD_PROVIDER)
+
+
+def start_card_login():
+    """Account chooser for "Twoja karta". Google returns to the root page;
+    app.py sends the player on to the cards (claim_card_login)."""
+    st.login(CARD_PROVIDER)
+
+
+def claim_card_login(max_age_seconds: int = 45) -> bool:
+    """True exactly once right after a login started on the cards page."""
+    return _claim_fresh((CARD_PROVIDER,), max_age_seconds) is not None
 
 
 def start_action_login(action: str):

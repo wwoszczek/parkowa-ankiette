@@ -12,7 +12,10 @@ import streamlit as st
 from src.config import init_database
 from src.game_config import SIGNUP_OPENING_MESSAGE
 from src.ui import components as ui
+from src.ui import fut
 from src.utils.auth import get_current_user, is_admin
+from src.utils.card_profile import load_profiles
+from src.utils.cards import load_cards, rookie_card
 from src.utils.datetime_utils import format_game_date, parse_game_time
 from src.utils.game_utils import get_active_games
 from src.utils.signup_utils import get_signups_for_game, resolve_account_names
@@ -306,6 +309,41 @@ def _builder(db, game, players: list, user: dict, admin: bool,
 
 # ----- Page sections -------------------------------------------------------
 
+def _pitch(db, lineups: dict, signups: list):
+    """Saved squads as FUT cards on the pitch, in lineup order (the first one
+    in goal). Card positions are decoration only and never move anyone."""
+    cards = load_cards(db)["cards"]
+    profiles = load_profiles(db)
+    accounts = {
+        s["nickname"]: s["user_email"].lower()
+        for s in signups if s.get("user_email") and not s.get("is_guest")
+    }
+    guests = {s["nickname"] for s in signups if s.get("is_guest")}
+    teams_html = []
+    for color, slots in lineups.items():
+        minis = []
+        for slot in slots:
+            name = slot["name"]
+            email = accounts.get(name)
+            if email:
+                card = dict(cards.get(email) or rookie_card(email, name), name=name)
+            else:  # a guest, or a freed place
+                card = {"name": name, "tier": "guest", "ovr": None}
+            profile = profiles.get(email, {}) if email else {}
+            note = (
+                "nie gra" if slot.get("out")
+                else "z ławki" if slot.get("sub_for")
+                else "gość" if name in guests
+                else ""
+            )
+            minis.append(fut.card_html(
+                card, profile.get("photo"), profile.get("position"),
+                mini=True, note=note, dim=bool(slot.get("out")),
+            ))
+        teams_html.append(fut.pitch_html(color, ui.team_hex(color), minis))
+    fut.squads_pitch(teams_html)
+
+
 def _saved_view(db, game, signups, players, rows, user, admin, owner_name):
     gid = game["id"]
     owner = squads_owner(rows)
@@ -314,7 +352,20 @@ def _saved_view(db, game, signups, players, rows, user, admin, owner_name):
 
     if owner:
         ui.squad_owner(owner_name, is_you=mine)
-    ui.team_cards(lineups)
+    # Cards on the pitch by default; one tap folds them into the plain lists
+    # (remembered for the session, for every game).
+    folded = st.session_state.get("sq_folded", False)
+    if st.button(
+        "Pokaż na boisku" if folded else "Zwiń do listy",
+        icon=":material/unfold_more:" if folded else ":material/unfold_less:",
+        key=f"sqfold_{gid}", type="tertiary",
+    ):
+        st.session_state["sq_folded"] = not folded
+        st.rerun()
+    if folded:
+        ui.team_cards(lineups)
+    else:
+        _pitch(db, lineups, signups)
     if any(slot.get("sub_for") for slots in lineups.values() for slot in slots):
         st.caption(
             ":material/swap_horiz: Ktoś się wypisał — zwolnione miejsce zajmuje pierwsza osoba z ławki"

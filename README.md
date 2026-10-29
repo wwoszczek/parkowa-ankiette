@@ -1,8 +1,8 @@
 # Parkowa - Weekly Football Games
 
 Streamlit app for organizing weekly pickup football: signups, a squad builder
-with a reserve bench, and game history. Polish UI, Supabase PostgreSQL,
-free-tier friendly.
+with a reserve bench, FUT-style player cards, and game history. Polish UI,
+Supabase PostgreSQL, free-tier friendly.
 
 ## Features
 
@@ -41,6 +41,41 @@ free-tier friendly.
   freed place (shown as "z ławki · za …") until the owner edits the squads
 - Stats count reserves who stayed on the bench as signups, not games played
 
+### Player cards
+- Every Google account gets a card in the style of FIFA 14-17 Ultimate Team:
+  **bronze, silver, gold**, plus **W formie**, **TOTY** and **Legenda**. The
+  designs are our own (CSS + inline SVG), not game artwork
+- Rating (OVR) and six stats come **only from played games** since signups
+  moved to Google accounts - nobody, not even an admin, sets them. The bench
+  does not count. They measure commitment, not skill, so they never affect
+  squads:
+  - **TEM** signup speed after opening, **STR** attendance in the last 10
+    games, **POD** guests brought, **DRY** longest run of games in a row,
+    **OBR** tenure, **FIZ** games played
+  - **OVR** is the player's rank in overall commitment (games, recent form,
+    the current run, tenure, best run, speed, guests) mapped onto FUT bands:
+    the least committed 35% bronze (50-64), the next 35% silver (65-74), the
+    rest gold (75-95). New players start bronze: silver needs 3 played games,
+    gold 8, however short the history. Long runs are rewarded twice (current
+    run and best run)
+  - **Legenda**: rating 90+ and at least 4 games in a row up to the last one;
+    **TOTY**: the 3 golds with most games in the last 52 weeks; **W formie**:
+    silver/gold on a run of 3+ whom the model gives 75%+ to play next week
+- **Forma**: a small logistic regression (numpy) trained on the group's
+  attendance history predicts each player's chance of playing the next game.
+  The admin panel shows its time-split check against a simple baseline
+- **Twoja karta** on `/cards`: the signed-in account's card, where the player
+  sets a **position** (BR/OBR/POM/NAP - decoration only, never moves anyone)
+  and uploads a **photo** (JPG/PNG/WebP up to 5 MB, re-encoded server-side to
+  a small square WebP). Admins can set photos and positions for any account
+  and see the full distribution with the model check
+- Saved squads show on a **pitch** with mini cards (1-2-2-1 for 6, 1-2-3-1
+  for 7, lineup order - the first player in goal); "Zwiń do listy" folds them
+  back into the plain team lists
+- Thresholds live in the `cards:` section of `game_consts.yaml`;
+  `python card_report.py` prints the distribution from the real
+  database (read-only) to tune them
+
 ### History
 - Archive of past games: pick a game, see players, squads and the bench
 - Stat chips show player count and number of teams
@@ -55,7 +90,8 @@ free-tier friendly.
 | URL | Page |
 |---|---|
 | `/` | signup form + live player list |
-| `/teams` | squad builder + saved squads and bench |
+| `/teams` | squad builder + saved squads (on the pitch or as lists) and bench |
+| `/cards` | player cards, "Twoja karta" (position + photo) |
 | `/history` | past games archive |
 | `/stats` | most active players by season — podium + full ranking |
 
@@ -82,6 +118,23 @@ Squad ownership needs one column on `teams` (run once in the SQL editor):
 
 ```sql
 ALTER TABLE teams ADD COLUMN IF NOT EXISTS created_by_email TEXT;
+```
+
+Player cards keep positions and photos in their own table (the cards work
+without it - placeholders, no positions - until it exists):
+
+```sql
+CREATE TABLE IF NOT EXISTS player_cards (
+    user_email        TEXT PRIMARY KEY,  -- lowercased Google e-mail
+    position          TEXT CHECK (position IN ('BR', 'OBR', 'POM', 'NAP')),
+    photo             BYTEA CHECK (photo IS NULL OR octet_length(photo) <= 200000),
+    photo_updated_at  TIMESTAMPTZ,
+    photo_uploaded_by TEXT,
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+-- The app connects as the table owner, which RLS does not affect; with no
+-- policies, Supabase's public REST API cannot read or write the photos.
+ALTER TABLE player_cards ENABLE ROW LEVEL SECURITY;
 ```
 
 ### 3. Login (Google)
@@ -113,7 +166,18 @@ client_id = "....apps.googleusercontent.com"   # same values as above
 client_secret = "..."
 server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
 client_kwargs = { prompt = "select_account" }
+
+# Optional: "Pokaż moją kartę" on /cards - a plain login (no signup or
+# signout) that brings the player back to the cards. Same values again.
+[auth.card]
+client_id = "....apps.googleusercontent.com"
+client_secret = "..."
+server_metadata_url = "https://accounts.google.com/.well-known/openid-configuration"
+client_kwargs = { prompt = "select_account" }
 ```
+
+Without `[auth.card]` a player still sees their card once they have signed
+up or out with Google in that browser (the login cookie lasts 30 days).
 
 For local development without OAuth, a `[dev_user]` secrets section
 (`enabled`, `email`, `name`) fakes a logged-in user.

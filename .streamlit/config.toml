@@ -7,3 +7,7 @@ textColor = "#16241C"
 
 [browser]
 gatherUsageStats = false
+
+[server]
+# Card photos: uploads above this many MB are refused (src/utils/card_profile.py MAX_UPLOAD_MB)
+maxUploadSize = 5

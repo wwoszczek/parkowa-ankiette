@@ -49,6 +49,25 @@ teams:
     colors: ["biała", "czerwona", "czarna"]
     players_per_team: [6, 6, 6]
 
+# ===== PLAYER CARDS =====
+# FUT-style cards: ratings come only from the history of played games with
+# Google accounts (from `since`, default: the first such game). They calibrate
+# to the real distribution: players are ranked by commitment and the ranks map
+# onto FUT bands (bronze < 65, silver 65-74, gold 75+), so the shares below
+# hold whatever the data looks like. Special cards override the colour.
+cards:
+  since: null          # e.g. 2025-11-05; null = first game with Google signups
+  bronze_share: 0.35   # least committed 35% of cards: bronze
+  silver_share: 0.35   # next 35%: silver; the rest gold
+  silver_games: 3      # ...but silver needs at least this many played games
+  gold_games: 8        # ...and gold this many - so new players start bronze however the group looks
+  legend: 90           # Legenda: rating at least this (about the top 7%)...
+  legend_streak: 4     # ...and at least this many games in a row up to the last one
+  in_form_streak: 3    # W formie (silver or gold only): on a streak this long...
+  in_form_chance: 0.75 # ...the model expects them next week with this chance...
+  in_form_max: 3       # ...at most this many (the likeliest)
+  toty_size: 3         # TOTY: the three non-legends with most games in the last 52 weeks (gold)
+
 # DAY NAMES (nominative + accusative, e.g. "w środę")
 day_names: ["poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota", "niedziela"]
 day_names_accusative: ["poniedziałek", "wtorek", "środę", "czwartek", "piątek", "sobotę", "niedzielę"]

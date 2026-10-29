@@ -272,7 +272,7 @@ def account_strip(name: str):
     _render(f'<div class="pk-account">Zalogowano jako <b>{escape(name)}</b></div>')
 
 
-def _pl_games(n: int) -> str:
+def pl_games(n: int) -> str:
     if n == 1:
         return "1 gierka"
     if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
@@ -297,7 +297,7 @@ def podium(top):
             f'<div class="pk-pod pk-pod-{place}">'
             f'<div class="pk-pod-medal">{place}</div>'
             f'<div class="pk-pod-name">{escape(p["name"])}{guest}</div>'
-            f'<div class="pk-pod-count">{_pl_games(p["count"])}</div>'
+            f'<div class="pk-pod-count">{pl_games(p["count"])}</div>'
             f'<div class="pk-pod-bar"></div>'
             "</div>"
         )

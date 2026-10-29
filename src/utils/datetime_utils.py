@@ -34,6 +34,14 @@ def get_next_game_time():
     return next_game
 
 
+def signup_opening_for(game_dt):
+    """When signups opened for the game starting at game_dt: the configured
+    weekday and hour before it (mirrors the scheduler)."""
+    days = (game_dt.weekday() - SIGNUP_OPEN_DAY) % 7 or 7
+    day = game_dt.date() - timedelta(days=days)
+    return TIMEZONE.localize(datetime(day.year, day.month, day.day, SIGNUP_OPEN_HOUR, SIGNUP_OPEN_MINUTE))
+
+
 def parse_game_time(start_time):
     """Safely parse game start_time from database, handling both string and datetime objects"""
     if isinstance(start_time, str):
