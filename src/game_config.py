@@ -24,6 +24,8 @@ _config = load_config()
 GAME_DAY = _config['game']['day']
 GAME_START_HOUR = _config['game']['hour']
 GAME_START_MINUTE = _config['game']['minute']
+# Optional: shown as an end time ("19:00–20:30"); scheduling ignores it
+GAME_DURATION_MINUTES = _config['game'].get('duration_minutes')
 # [(from_date, hour, minute)] sorted by date; YAML parses ISO dates to date objects
 GAME_TIME_CHANGES = sorted(
     (date.fromisoformat(str(change['from'])), change['hour'], change['minute'])

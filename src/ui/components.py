@@ -9,6 +9,7 @@ import streamlit as st
 from src.ui import graphics
 from src.utils.datetime_utils import (
     format_game_date,
+    game_hours,
     parse_timestamp,
     relative_day_label,
 )
@@ -78,7 +79,7 @@ def hero(game_dt, chips=()):
         '<div class="pk-hero-body">'
         '<div class="pk-hero-label">Najbliższa gierka</div>'
         f'<div class="pk-hero-date">{escape(format_game_date(game_dt, with_time=False))}</div>'
-        f'<div class="pk-hero-meta">{game_dt.strftime("%H:%M")} · {escape(relative_day_label(game_dt))}</div>'
+        f'<div class="pk-hero-meta">{game_hours(game_dt)} · {escape(relative_day_label(game_dt))}</div>'
         f"{chips_block}"
         "</div>"
         "</div>"

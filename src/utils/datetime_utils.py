@@ -5,7 +5,7 @@ Helper functions for date and time handling
 from datetime import datetime, timedelta
 from src.constants import TIMEZONE
 from src.game_config import (
-    GAME_DAY, GAME_START_HOUR, GAME_START_MINUTE, GAME_TIME_CHANGES,
+    GAME_DAY, GAME_START_HOUR, GAME_START_MINUTE, GAME_TIME_CHANGES, GAME_DURATION_MINUTES,
     SIGNUP_OPEN_DAY, SIGNUP_OPEN_HOUR, SIGNUP_OPEN_MINUTE,
     DAY_NAMES,
 )
@@ -72,6 +72,14 @@ def format_game_date(dt, with_time=True):
     day_name = DAY_NAMES[dt.weekday()].capitalize()
     base = f"{day_name}, {dt.strftime('%d.%m.%Y')}"
     return f"{base} · {dt.strftime('%H:%M')}" if with_time else base
+
+
+def game_hours(dt):
+    """'19:00–20:30' when the game length is configured, else '19:00'."""
+    start = dt.strftime('%H:%M')
+    if not GAME_DURATION_MINUTES:
+        return start
+    return f"{start}–{(dt + timedelta(minutes=GAME_DURATION_MINUTES)).strftime('%H:%M')}"
 
 
 def relative_day_label(dt):
