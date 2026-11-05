@@ -202,6 +202,44 @@ def deactivate_past_games(connection) -> int:
         raise
 
 
+def remove_off_schedule_games(connection) -> int:
+    """Delete pre-created games the schedule no longer has - after the game
+    day or time changes in game_consts.yaml, the game created a week ahead
+    would otherwise open alongside the new one. Only inactive future games
+    nobody signed up for (and with no squads) are touched; create_upcoming_games
+    then creates the right one."""
+    logger.info("Checking for pre-created games off the schedule...")
+    now = datetime.now(TIMEZONE)
+
+    try:
+        removed_count = 0
+        for game in execute_query(connection, "SELECT * FROM games WHERE active = FALSE"):
+            game_time = parse_game_time(game['start_time'])
+            if game_time <= now:
+                continue
+            if game_time.weekday() == GAME_DAY and game_time == game_start_on(game_time.date()):
+                continue
+            removed = execute_query(
+                connection,
+                "DELETE FROM games WHERE id = %s AND active = FALSE "
+                "AND NOT EXISTS (SELECT 1 FROM signups WHERE game_id = %s) "
+                "AND NOT EXISTS (SELECT 1 FROM teams WHERE game_id = %s)",
+                (game['id'], game['id'], game['id'])
+            )
+            if removed:
+                logger.info(f"Removed pre-created game on {game_time.strftime('%d.%m.%Y %H:%M')} - not on the schedule any more")
+                removed_count += 1
+
+        if removed_count == 0:
+            logger.info("No pre-created games off the schedule")
+
+        return removed_count
+
+    except Exception as e:
+        logger.error(f"Failed to remove off-schedule games: {e}")
+        raise
+
+
 def create_upcoming_games(connection) -> int:
     """Create games for next week"""
     logger.info("Checking whether new games need to be created...")
@@ -303,7 +341,10 @@ def main():
         
         # Deactivate past games
         deactivated = deactivate_past_games(connection)
-        
+
+        # Drop pre-created games a schedule change left behind
+        removed = remove_off_schedule_games(connection)
+
         # Create new games
         created = create_upcoming_games(connection)
         
@@ -317,6 +358,7 @@ def main():
         logger.info("=" * 50)
         logger.info("SUMMARY:")
         logger.info(f"   Deactivated: {deactivated} games")
+        logger.info(f"   Removed off-schedule: {removed} games")
         logger.info(f"   Activated: {activated} games")
         logger.info(f"   Created: {created} new games")
         logger.info(f"   Final state: {final_stats['active_games_count']} active games")

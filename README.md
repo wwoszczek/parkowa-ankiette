@@ -128,16 +128,21 @@ Add the `SUPABASE_DATABASE_URL` secret in the GitHub repo - the workflow in
 All times live in `game_consts.yaml` (Python weekday: 0=Monday):
 
 ```yaml
-game:                                     # Wednesday 18:30
-  day: 2
-  hour: 18
-  minute: 30
-  time_changes:                           # optional: new start time from a date on
-    - { from: 2026-11-01, hour: 19, minute: 30 }
-signup: { day: 6, hour: 10, minute: 0 }   # opens Sunday 10:00
+game:                                     # Monday 19:00-20:30
+  day: 0
+  hour: 19
+  minute: 0
+  duration_minutes: 90                    # optional: shows the end time (19:00–20:30)
+  time_changes: []                        # optional: new start time from a date on,
+                                          # e.g. - { from: 2027-04-01, hour: 18, minute: 30 }
+signup: { day: 4, hour: 10, minute: 0 }   # opens Friday 10:00
 guests: { max_per_user: 5 }
 ```
 
 Times are Warsaw wall-clock times; summer/winter time is handled in code.
-A `time_changes` entry only affects games created after it applies - games
-already in the database keep their stored start time.
+When the game day or time changes, the cron in `.github/workflows/scheduler.yml`
+must follow (it runs around signup opening and after the game). Games are
+pre-created a week ahead: on its next run the scheduler removes a pre-created
+game that no longer fits the schedule (inactive, nobody signed up, no squads)
+and creates the right one. A game whose signups are already open keeps its
+stored time.
