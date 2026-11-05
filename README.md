@@ -135,7 +135,7 @@ game:                                     # Monday 19:00-20:30
   duration_minutes: 90                    # optional: shows the end time (19:00–20:30)
   time_changes: []                        # optional: new start time from a date on,
                                           # e.g. - { from: 2027-04-01, hour: 18, minute: 30 }
-signup: { day: 4, hour: 10, minute: 0 }   # opens Friday 10:00
+signup: { day: 4, hour: 6, minute: 0 }    # opens Friday 06:00
 guests: { max_per_user: 5 }
 ```
 

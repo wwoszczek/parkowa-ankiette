@@ -2,14 +2,14 @@ name: Game scheduler
 
 on:
   schedule:
-    # Times are UTC and tied to game_consts.yaml (signup Friday 10:00, game
+    # Times are UTC and tied to game_consts.yaml (signup Friday 06:00, game
     # Monday 19:00-20:30, Warsaw time) - update them if those days change.
     # Every run does all steps (deactivate, clean up, create, activate), so
     # each run also covers for a delayed or dropped one.
-    # Friday signup opening: 08:00 UTC = 10:00 CEST, 09:00 UTC = 10:00 CET;
-    # 11:30 UTC is a safety net if both were dropped.
-    - cron: '0 8,9 * * 5'
-    - cron: '30 11 * * 5'
+    # Friday signup opening: 04:00 UTC = 06:00 CEST, 05:00 UTC = 06:00 CET;
+    # 07:30 UTC is a safety net if both were dropped.
+    - cron: '0 4,5 * * 5'
+    - cron: '30 7 * * 5'
     # Monday after the game (22:00 CEST / 21:00 CET): deactivate it and
     # pre-create next week's one.
     - cron: '0 20 * * 1'
